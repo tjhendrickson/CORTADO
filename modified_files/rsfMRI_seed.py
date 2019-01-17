@@ -35,25 +35,30 @@ args = parser.parse_args()
 
 # global variables
 seed_roi = (args.seedROI,)
-regressor_file = 'REGRESSOR.txt'
-data_dir = args.output_dir
+regressor_file = args.seedROI + '_regressor.txt'
+output_dir = args.output_dir
 subj_id = args.participant_label
 ses_id = args.session_label
 parcel_file = args.parcellation_file
 
-# TODO: return cifti label names from cifti label file
+#read parcel file and return label names 
 read_parcel_file = cifti.read(parcel_file)
-parcel_file_array = read_parcel_file[1][0]
+parcel_file_label_tuple = read_parcel_file[1][0][0][1]
+parcel_labels = []
+for idx, value in enumerate(parcel_file_label_tuple):
+        if not '???' in parcel_file_label_tuple[idx][0]:
+                parcel_labels.append(parcel_file_label_tuple[idx][0])
+labels = pd.DataFrame(parcel_labels)
 
 
-
+# TODO: shore up how to handle this within container
 tasknames=['task-rest_acq-eyesopenbeforePA_run-02_bold', 'task-rest_acq-eyesopenafterPA_run-03_bold']
-ptseries_files = [ ptseries_file for taskname in tasknames for ptseries_file in glob(os.path.join(data_dir, 'HCP_output','sub-' + subj_id, 'ses-' + ses_id, 'MNINonLinear', 'Results', 'sub-' + subj_id + '_ses-' + ses_id + '_' + taskname, 'RestingStateStats',  'sub-' +subj_id + '_ses-' + ses_id + '_' + taskname + '_Atlas_MSMAll_2_d40_WRN_hp2000_clean.ptseries.nii'))]
+ptseries_files = [ ptseries_file for taskname in tasknames for ptseries_file in glob(os.path.join(output_dir, 'HCP_output','sub-' + subj_id, 'ses-' + ses_id, 'MNINonLinear', 'Results', 'sub-' + subj_id + '_ses-' + ses_id + '_' + taskname, 'RestingStateStats',  'sub-' +subj_id + '_ses-' + ses_id + '_' + taskname + '_Atlas_MSMAll_2_d40_WRN_hp2000_clean.ptseries.nii'))]
 
 
 def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_file):
         taskname = ptseries_file.split("/")[-3]
-        cmd = '%s/generate_level1_fsf.sh --studyfolder="%s/HCP_output" --subject="%s" --session="%s" --taskname="%s" --templatedir="%s" --outdir="%s"' % (current_dir, data_dir, subj_id, ses_id, taskname,current_dir,out_dir)
+        cmd = '%s/generate_level1_fsf.sh --studyfolder="%s/HCP_output" --subject="%s" --session="%s" --taskname="%s" --templatedir="%s" --outdir="%s"' % (current_dir, output_dir, subj_id, ses_id, taskname,current_dir,out_dir)
         process = Popen(shlex.split(cmd), stdout=PIPE)
         process.communicate()
         exit_code = process.wait()
@@ -70,27 +75,27 @@ def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_
                 filedata = filedata.replace('FEATFILE', feat_file)
                 with open(fsf_file, 'w') as file:
                         file.write(filedata)
-                cmd = '%s/ROI_rsfMRIAnalysisBatch.sh --StudyFolder="%s/HCP_output/%s" --Subjlist="%s" --seedROI="%s" --TaskName="%s" --runlocal' % (current_dir, data_dir, subj_id, ses_id, regressor_file.split(".")[0],taskname)
+                cmd = '%s/ROI_rsfMRIAnalysisBatch.sh --StudyFolder="%s/HCP_output/%s" --Subjlist="%s" --seedROI="%s" --TaskName="%s" --runlocal' % (current_dir, output_dir, subj_id, ses_id, regressor_file.split(".")[0],taskname)
                 process = Popen(shlex.split(cmd), stdout=PIPE)
                 process.communicate()
 	
-def write_regressor(ptseries_file):
+def write_regressor(ptseries_file,label_headers, seed_roi):
 
-        
 	#create needed variables
-	ptseries_file = ptseries_file
-	subj_id = ptseries_file.split("/")[-1].split("_")[0]
-	ses_id = ptseries_file.split("/")[-1].split("_")[1]
 	ptseries_load = nibabel.cifti2.cifti2.load(ptseries_file)
 	RSS_folder = "/".join(ptseries_file.split("/")[:-1])
-	out_dir = "/".join(ptseries_file.split("/")[:-2])
-	
+	regressor_file_path = os.path.join(RSS_folder,regressor_file)
 	#create regressor/s file
 	df = pd.DataFrame(ptseries_load.get_fdata())
-	df.columns = headers
-	df.to_csv(os.path.join(RSS_folder,regressor_file),header=False,index=False,columns=[seed_roi],sep=' ')
+	df.columns = label_headers
+	df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_roi],sep=' ')
+        return regressor_file_path
 
-	run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_file)
+#	run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file)
+
+regressor_file_path = write_regressor(ptseries_file, labels, seed_roi)
+run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+
 
 
 
