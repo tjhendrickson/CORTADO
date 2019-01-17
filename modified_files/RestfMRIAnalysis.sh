@@ -116,7 +116,7 @@ determine_old_or_new_fsl()
 ########################################## READ_ARGS ##################################
 
 # Explcitly set tool name for logging
-log_SetToolName "TaskfMRIAnalysis.sh"
+log_SetToolName "RestfMRIAnalysis.sh"
 
 # Show version of HCP Pipeline Scripts in use if requested
 opts_ShowVersionIfRequested $@

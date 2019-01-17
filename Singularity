@@ -2,15 +2,16 @@ Bootstrap: docker
 
 From: ubuntu:trusty-20170119
 
-
 %files
+
 run.py /run.py
 modified_files/generate_level1_fsf.sh /generate_level1_fsf.sh
 modified_files/RestfMRIAnalysis.sh /RestfMRIAnalysis.sh
 modified_files/RestfMRILevel1.sh /RestfMRILevel1.sh
-
+modified_files/rsfMRI_seed.py /rsfMRI_seed.py
 
 %environment
+
 export CARET7DIR=/opt/workbench/bin_rh_linux64
 export HCPPIPEDIR=/opt/HCP-Pipelines
 export HCPPIPEDIR_Templates=/opt/HCP-Pipelines/global/templates
@@ -44,41 +45,43 @@ export FSLWISH=/usr/bin/wish
 export FSLOUTPUTTYPE=NIFTI_GZ
 
 %post
+
 # Make script executable
 chmod +x /run.py
 
-# Make local folders
+# Make local folders/files
 mkdir /share
 mkdir /scratch
 mkdir /local-scratch
 mkdir /bids_dir
 mkdir /output_dir
 mkdir /fsf_template_dir
+touch /parcel_dlabel.nii
 
 # Install basic utilities
 apt-get -qq update
 apt-get install -yq --no-install-recommends wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl
 
+
+# Install anaconda 
 cd /opt
-git clone https://github.com/circulosmeos/gdown.pl.git
+wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
+bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
+export PATH="/opt/Anaconda2/bin:${PATH}"
 
-curl -sSL http://neuro.debian.net/lists/trusty.us-ca.full >> /etc/apt/sources.list.d/neurodebian.sources.list
 
-sed -i -e 's,main *$,main contrib non-free,g' /etc/apt/sources.list.d/neurodebian.sources.list
-grep -q 'deb .* multiverse$' /etc/apt/sources.list || sed -i -e 's,universe *$,universe multiverse,g' /etc/apt/sources.list
-
-# Install FSL 5.0.9
+# Install FSL 5.0.11
 apt-get update
-apt-get install -y --no-install-recommends curl
-curl -sSL http://neuro.debian.net/lists/trusty.us-ca.full >> /etc/apt/sources.list.d/neurodebian.sources.list
-apt-key adv --recv-keys --keyserver hkp://pgp.mit.edu:80 0xA5D32F012649A5A9
-apt-get update
-apt-get install -y fsl-core=5.0.9-4~nd14.04+1
-apt-get build-dep -y gridengine && apt-get update -y
+cd /tmp
+wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
+python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
+export FSLDIR=/usr/local/fsl
+. ${FSLDIR}/etc/fslconf/fsl.sh
+PATH=${FSLDIR}/bin:${PATH}
+${FSLDIR}/etc/fslconf/fslpython_install.sh
 
 # Install HCP Pipelines v3.27.0
 apt-get update
-apt-get install -y --no-install-recommends python-numpy
 wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
 cd /opt/
 mkdir /opt/HCP-Pipelines
@@ -108,11 +111,13 @@ curl -sL https://deb.nodesource.com/setup_10.x | bash -
 apt-get remove -y curl
 apt-get install -y nodejs
 npm install -g bids-validator@0.26.11
-
-apt-get update && apt-get install -y --no-install-recommends python-pip python-six python-nibabel python-setuptools python-dev git
 pip install git+https://github.com/INCF/pybids.git@0.6.0
 
-# upgrade our libstdc++
+# Install needed python tools
+/opt/Anaconda2/bin/pip install certificates
+
+
+# Upgrade our libstdc++
 echo "deb http://ftp.de.debian.org/debian stretch main" >> /etc/apt/sources.list
 apt-get update
 apt-get install -y --force-yes libstdc++6 nano
