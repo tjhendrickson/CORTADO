@@ -147,8 +147,6 @@ log_Msg "READ_ARGS: Path: ${Path}"
 log_Msg "READ_ARGS: Subject: ${Subject}"
 log_Msg "READ_ARGS: LevelOnefMRINames: ${LevelOnefMRINames}"
 log_Msg "READ_ARGS: LevelOnefsfNames: ${LevelOnefsfNames}"
-log_Msg "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
-log_Msg "READ_ARGS: LevelTwofsfNames: ${LevelTwofsfNames}"
 log_Msg "READ_ARGS: LowResMesh: ${LowResMesh}"
 log_Msg "READ_ARGS: GrayordinatesResolution: ${GrayordinatesResolution}"
 log_Msg "READ_ARGS: OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
@@ -169,7 +167,7 @@ old_or_new_version=$(determine_old_or_new_fsl ${fsl_ver})
 if [ "${old_or_new_version}" == "OLD" ]
 then
 	# Need to exit script due to incompatible FSL VERSION!!!!
-	log_Msg "MAIN: TEST_FSL_VERSION: ERROR: Detected pre-5.0.7 version of FSL in use (version ${fsl_ver}). Task fMRI Analysis not invoked. Exiting."
+	log_Msg "MAIN: TEST_FSL_VERSION: ERROR: Detected pre-5.0.7 version of FSL in use (version ${fsl_ver}). Rest fMRI Analysis not invoked. Exiting."
 	exit 1
 else
 	log_Msg "MAIN: TEST_FSL_VERSION: Beginning analyses with FSL version ${fsl_ver}"
@@ -190,8 +188,8 @@ for LevelOnefMRIName in $( echo $LevelOnefMRINames | sed 's/@/ /g' ) ; do
 	log_Msg "MAIN: RUN_LEVEL1: LevelOnefMRIName: ${LevelOnefMRIName}"	
 	# Get corresponding fsf name from $LevelOnefsfNames list
 	LevelOnefsfName=`echo $LevelOnefsfNames | cut -d "@" -f $i`
-	log_Msg "MAIN: RUN_LEVEL1: Issuing command: /home/umii/hendr522/scratch.global.data/BIDS/263_ETOH_tDCS/rsfMRI_seed_analysis/RestfMRILevel1.sh $Subject $ResultsFolder $ROIsFolder $DownSampleFolder $LevelOnefMRIName $LevelOnefsfName $LowResMesh $GrayordinatesResolution $OriginalSmoothingFWHM $Confound $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation $ParcellationFile $seedROI"
-	/home/umii/hendr522/scratch.global.data/BIDS/263_ETOH_tDCS/seed_rsfMRI_analysis/RestfMRILevel1.sh \
+	log_Msg "MAIN: RUN_LEVEL1: Issuing command: /opt/HCP-Pipelines/TaskfMRIAnalysis/RestfMRILevel1.sh $Subject $ResultsFolder $ROIsFolder $DownSampleFolder $LevelOnefMRIName $LevelOnefsfName $LowResMesh $GrayordinatesResolution $OriginalSmoothingFWHM $Confound $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation $ParcellationFile $seedROI"
+	/opt/HCP-Pipelines/TaskfMRIAnalysis//RestfMRILevel1.sh \
 	  $Subject \
 	  $ResultsFolder \
 	  $ROIsFolder \
@@ -211,27 +209,6 @@ for LevelOnefMRIName in $( echo $LevelOnefMRINames | sed 's/@/ /g' ) ; do
 	  $seedROI
 	i=$(($i+1))
 done
-
-if [ "$LevelTwofMRIName" != "NONE" ]
-then
-	# Combine Data Across Phase Encoding Directions in the Level 2 Analysis
-	log_Msg "MAIN: RUN_LEVEL2: Combine Data Across Phase Encoding Directions in the Level 2 Analysis"
-	log_Msg "MAIN: RUN_LEVEL2: Issuing command: ${HCPPIPEDIR_tfMRIAnalysis}/TaskfMRILevel2.sh $Subject $ResultsFolder $DownSampleFolder $LevelOnefMRINames $LevelOnefsfNames $LevelTwofMRIName $LevelTwofsfNames $LowResMesh $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation"
-	${HCPPIPEDIR_tfMRIAnalysis}/TaskfMRILevel2.sh \
-	  $Subject \
-	  $ResultsFolder \
-	  $DownSampleFolder \
-	  $LevelOnefMRINames \
-	  $LevelOnefsfNames \
-	  $LevelTwofMRIName \
-	  $LevelTwofsfNames \
-	  $LowResMesh \
-	  $FinalSmoothingFWHM \
-	  $TemporalFilter \
-	  $VolumeBasedProcessing \
-	  $RegName \
-	  $Parcellation
-fi
 
 log_Msg "MAIN: Completed"
 

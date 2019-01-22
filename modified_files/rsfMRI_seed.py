@@ -9,6 +9,7 @@ from multiprocessing import Pool
 from subprocess import Popen, PIPE
 import shlex
 import cifti
+import pdb
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--output_dir', help='The directory where the output files '
@@ -28,18 +29,22 @@ parser.add_argument('--session_label', help='The label of the session that shoul
                    nargs="+")   
 parser.add_argument('--coreg', help='Coregistration method to use ',
                     choices=['MSMSulc', 'FS'], default='MSMSulc')
-parser.add_argument('--parcellation_file', help='The CIFTI label file to use or used to parcellate the brain. ')
-parser.add_argument('--parcellation_name', help='Shorthand name of the CIFTI label file. ')
-parser.add_argument('--seedROI', help='ROI name from CIFTI label file to be used as the seed ROI. The exact ROI from the label file must be known! ')
+parser.add_argument('--parcel_file', help='The CIFTI label file to use or used to parcellate the brain. ')
+parser.add_argument('--parcel_name', help='Shorthand name of the CIFTI label file. ')
+parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s from CIFTI label file to be used as the seed ROI/s. The exact ROI from the label file must be known!', nargs="+")
+parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do you want to treat them as together (i.e. averaging ROIs together), or separate (run separate seed based analyses for each ROI)? '
+                                        'Choices are "together", or "separate". Default argument is "separate".',
+                        choices=['together', 'separate'], default='separate')
 args = parser.parse_args()
 
 # global variables
-seed_roi = (args.seedROI,)
-regressor_file = args.seedROI + '_regressor.txt'
+pdb.set_trace()
+seed_roi = (args.seed_ROI_name,) #TODO: will have to handle this in a different way since a space separated list can now be used
+regressor_file = args.seedROI + '_regressor.txt' #TODO: will have to handle this in a different way since a space separated list can now be used
 output_dir = args.output_dir
 subj_id = args.participant_label
 ses_id = args.session_label
-parcel_file = args.parcellation_file
+parcel_file = args.parcel_file
 
 #read parcel file and return label names 
 read_parcel_file = cifti.read(parcel_file)
