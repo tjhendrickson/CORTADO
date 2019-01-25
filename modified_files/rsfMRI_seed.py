@@ -11,6 +11,8 @@ import shlex
 import cifti
 import pdb
 
+
+# For testing: ./rsfMRI_seed.py --output_dir /home/timothy/Projects/263_ETOH_tDCS/HCP_output --participant_label 7859 --session_label 48920 --parcel_file /home/timothy/Github/BIDShcppipelines/modified_files/360CortSurf_19Vol_parcel.dlabel.nii --parcel_name Glasser --seed_ROI_name AMYGDALA_LEFT AMYGDALA_RIGHT
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--output_dir', help='The directory where the output files '
                     'should be stored. If you are running group level analysis '
@@ -37,16 +39,11 @@ parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do y
                         choices=['together', 'separate'], default='separate')
 args = parser.parse_args()
 
-# global variables
-pdb.set_trace()
-seed_roi = (args.seed_ROI_name,) #TODO: will have to handle this in a different way since a space separated list can now be used
-regressor_file = args.seedROI + '_regressor.txt' #TODO: will have to handle this in a different way since a space separated list can now be used
+#global variables from arg parser
 output_dir = args.output_dir
 subj_id = args.participant_label
 ses_id = args.session_label
-parcel_file = args.parcel_file
-
-#read parcel file and return label names 
+parcel_file = args.parcel_file 
 read_parcel_file = cifti.read(parcel_file)
 parcel_file_label_tuple = read_parcel_file[1][0][0][1]
 parcel_labels = []
@@ -54,11 +51,6 @@ for idx, value in enumerate(parcel_file_label_tuple):
         if not '???' in parcel_file_label_tuple[idx][0]:
                 parcel_labels.append(parcel_file_label_tuple[idx][0])
 labels = pd.DataFrame(parcel_labels)
-
-
-# TODO: shore up how to handle this within container
-tasknames=['task-rest_acq-eyesopenbeforePA_run-02_bold', 'task-rest_acq-eyesopenafterPA_run-03_bold']
-ptseries_files = [ ptseries_file for taskname in tasknames for ptseries_file in glob(os.path.join(output_dir, 'HCP_output','sub-' + subj_id, 'ses-' + ses_id, 'MNINonLinear', 'Results', 'sub-' + subj_id + '_ses-' + ses_id + '_' + taskname, 'RestingStateStats',  'sub-' +subj_id + '_ses-' + ses_id + '_' + taskname + '_Atlas_MSMAll_2_d40_WRN_hp2000_clean.ptseries.nii'))]
 
 
 def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_file):
@@ -84,22 +76,55 @@ def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_
                 process = Popen(shlex.split(cmd), stdout=PIPE)
                 process.communicate()
 	
-def write_regressor(ptseries_file,label_headers, seed_roi):
+def write_regressor(ptseries_file,label_headers, seed_roi, regressor_file, seed_handling):
 
 	#create needed variables
-	ptseries_load = nibabel.cifti2.cifti2.load(ptseries_file)
-	RSS_folder = "/".join(ptseries_file.split("/")[:-1])
-	regressor_file_path = os.path.join(RSS_folder,regressor_file)
+    ptseries_load = nibabel.cifti2.cifti2.load(ptseries_file)
+    RSS_folder = "/".join(ptseries_file.split("/")[:-1])
+    regressor_file_path = os.path.join(RSS_folder,regressor_file)
 	#create regressor/s file
-	df = pd.DataFrame(ptseries_load.get_fdata())
-	df.columns = label_headers
-	df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_roi],sep=' ')
+    df = pd.DataFrame(ptseries_load.get_fdata())
+    df.columns = label_headers
+    if seed_handling == 'separate':
+        df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_roi],sep=' ')
         return regressor_file_path
+    #else:
+        
+
 
 #	run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file)
+def main():
+    
+    # TODO: shore up how to handle this within container
+    #tasknames=['task-rest_acq-eyesopenbeforePA_run-02_bold', 'task-rest_acq-eyesopenafterPA_run-03_bold']
+    #ptseries_files = [ ptseries_file for taskname in tasknames for ptseries_file in glob(os.path.join(output_dir, 'HCP_output','sub-' + subj_id, 'ses-' + ses_id, 'MNINonLinear', 'Results', 'sub-' + subj_id + '_ses-' + ses_id + '_' + taskname, 'RestingStateStats',  'sub-' +subj_id + '_ses-' + ses_id + '_' + taskname + '_Atlas_MSMAll_2_d40_WRN_hp2000_clean.ptseries.nii'))]
 
-regressor_file_path = write_regressor(ptseries_file, labels, seed_roi)
-run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+   # df['LGN_avg'] = df[[('L_Lateral_Geniculum_Body',),('R_Lateral_Geniculum_Body',)]].mean(axis=1)
+	# df.to_csv(os.path.join(RSS_folder,LGN_file),header=False,index=False,columns=['LGN_avg'],sep=' ')
+    
+    #organize variables based on # of ROIs and seed handling
+    if len(args.seed_ROI_name) > 1:
+        if args.seed_handling == "together":
+            seed_ROI_name = "-".join(str(x) for x in args.seed_roi_name)
+            regressor_file = seed_ROI_name + '-AvgRegressor.txt' #TODO: will have to handle this in a different way since a space separated list can now be used
+            regressor_file_path = write_regressor(ptseries_file, labels, seed_roi, regressor_file, args.seed_handling)
+            run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+        elif  args.seed_handling == "separate":
+            for seed in args.seed_ROI_name:
+                seed_roi = (seed,)
+                regressor_file_path = write_regressor(ptseries_file, labels, seed_roi, regressor_file, args.seed_handling)
+                run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+    else:
+        seed_roi = (args.seed_ROI_name,) 
+        regressor_file = args.seed_ROI_name + '-Regressor.txt'
+        regressor_file_path = write_regressor(ptseries_file, labels, seed_roi, regressor_file, args.seed_handling)
+        run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+
+main()
+ 
+
+
+
 
 
 
