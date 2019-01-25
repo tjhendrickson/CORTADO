@@ -31,6 +31,7 @@ parser.add_argument('--session_label', help='The label of the session that shoul
                    nargs="+")   
 parser.add_argument('--coreg', help='Coregistration method to use ',
                     choices=['MSMSulc', 'FS'], default='MSMSulc')
+parser.add_argument('--cifti_file', help='The CIFTI file to pull the seed timeseries from. Can either be a dtseries or ptseries file.')
 parser.add_argument('--parcel_file', help='The CIFTI label file to use or used to parcellate the brain. ')
 parser.add_argument('--parcel_name', help='Shorthand name of the CIFTI label file. ')
 parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s from CIFTI label file to be used as the seed ROI/s. The exact ROI from the label file must be known!', nargs="+")
@@ -47,10 +48,10 @@ parcel_file = args.parcel_file
 read_parcel_file = cifti.read(parcel_file)
 parcel_file_label_tuple = read_parcel_file[1][0][0][1]
 parcel_labels = []
+cifti_file = args.cifti_file
 for idx, value in enumerate(parcel_file_label_tuple):
         if not '???' in parcel_file_label_tuple[idx][0]:
                 parcel_labels.append(parcel_file_label_tuple[idx][0])
-labels = pd.DataFrame(parcel_labels)
 
 
 def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_file):
@@ -76,19 +77,25 @@ def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, regressor_
                 process = Popen(shlex.split(cmd), stdout=PIPE)
                 process.communicate()
 	
-def write_regressor(ptseries_file,label_headers, seed_roi, regressor_file, seed_handling):
-
-	#create needed variables
-    ptseries_load = nibabel.cifti2.cifti2.load(ptseries_file)
-    RSS_folder = "/".join(ptseries_file.split("/")[:-1])
-    regressor_file_path = os.path.join(RSS_folder,regressor_file)
-	#create regressor/s file
-    df = pd.DataFrame(ptseries_load.get_fdata())
+def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
+	
+    #create needed variables
+    cifti_load = nibabel.cifti2.cifti2.load(cifti_file)
+    cifti_file_folder = os.path.dirname(cifti_file)
+    regressor_file_path = os.path.join(cifti_file_folder,regressor_file)
+	
+    #create regressor file
+    df = pd.DataFrame(cifti_load.get_fdata())
+    pdb.set_trace()
     df.columns = label_headers
-    if seed_handling == 'separate':
-        df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_roi],sep=' ')
+    if type(seed_ROI_name) == str:
+        df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_ROI_name],sep=' ')
         return regressor_file_path
-    #else:
+    else:
+        if len(seed_ROI_name) == 2:
+            df['avg'] = df[[seed_ROI_name[0],seed_ROI_name[1]]].mean(axis=1)
+            df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
+            return regressor_file_path
         
 
 
@@ -105,20 +112,21 @@ def main():
     #organize variables based on # of ROIs and seed handling
     if len(args.seed_ROI_name) > 1:
         if args.seed_handling == "together":
-            seed_ROI_name = "-".join(str(x) for x in args.seed_roi_name)
-            regressor_file = seed_ROI_name + '-AvgRegressor.txt' #TODO: will have to handle this in a different way since a space separated list can now be used
-            regressor_file_path = write_regressor(ptseries_file, labels, seed_roi, regressor_file, args.seed_handling)
-            run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+            seed_ROI_merged_string = "-".join(str(x) for x in args.seed_ROI_name)
+            seed_ROI_name = args.seed_ROI_name
+            regressor_file = seed_ROI_merged_string + '-AvgRegressor.txt' 
+            regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
+            run_first_level_analysis(cifti_file, subj_id, ses_id, output_dir, regressor_file_path)
         elif  args.seed_handling == "separate":
-            for seed in args.seed_ROI_name:
-                seed_roi = (seed,)
-                regressor_file_path = write_regressor(ptseries_file, labels, seed_roi, regressor_file, args.seed_handling)
-                run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+            for seed_ROI_name in args.seed_ROI_name:
+                regressor_file = seed_ROI_name + '-Regressor.txt'
+                regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
+                run_first_level_analysis(cifti_file, subj_id, ses_id, output_dir, regressor_file_path)
     else:
-        seed_roi = (args.seed_ROI_name,) 
-        regressor_file = args.seed_ROI_name + '-Regressor.txt'
-        regressor_file_path = write_regressor(ptseries_file, labels, seed_roi, regressor_file, args.seed_handling)
-        run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file_path)
+        seed_ROI_name = args.seed_ROI_name[0]
+        regressor_file = seed_ROI_name + '-Regressor.txt'
+        regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
+        run_first_level_analysis(cifti_file, subj_id, ses_id, output_dir, regressor_file_path)
 
 main()
  
