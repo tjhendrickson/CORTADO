@@ -40,6 +40,18 @@ def run_Generatefsf_processing(**args):
         '--outdir="{path}/{subject}/MNINonLinear/Results/{fmriname}" '
     cmd = cmd.format(**args)
     run(cmd, cwd=args["path"], env={"OMP_NUM_THREADS": str(args["n_cpus"])})
+    fsf_file = "{path}/{subject}/MNINonLinear/Results/{fmriname}/{shorttaskname}_hp200_s2_level1.fsf" 
+    #feat_file = "../_%s_%s_hp2000_clean.nii.gz" % (subj_id, ses_id, taskname)  # TODO: work on how to handle this
+    with open(fsf_file, 'r') as file:
+        filedata = file.read()
+        filedata = filedata.replace('REGRESSOR',regressor_file)
+    with open(fsf_file, 'w') as file:
+        file.write(filedata)
+    with open(fsf_file, 'r') as file:
+        filedata = file.read()
+        filedata = filedata.replace('FEATFILE', feat_file)
+    with open(fsf_file, 'w') as file:
+        file.write(filedata)
 
 
 def run_seed_correlation_rsfMRI_processing(**args):
