@@ -55,7 +55,8 @@ for idx, value in enumerate(parcel_file_label_tuple):
         if not '???' in parcel_file_label_tuple[idx][0]:
                 parcel_labels.append(parcel_file_label_tuple[idx][0])
 
-
+# TODO: incorporate this function into run.py, not needed here
+"""
 def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, fsf_rsfMRI_folder, regressor_file):
     #args.update(os.environ)
     taskname = ptseries_file.split("/")[-3]
@@ -79,7 +80,7 @@ def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, fsf_rsfMRI
         cmd = '%s/ROI_rsfMRIAnalysisBatch.sh --StudyFolder="%s/HCP_output/%s" --Subjlist="%s" --seedROI="%s" --TaskName="%s" --runlocal' % (current_dir, output_dir, subj_id, ses_id, regressor_file.split(".")[0],taskname)
         process = Popen(shlex.split(cmd), stdout=PIPE)
         process.communicate()
-	
+"""	
 def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
     #args.update(os.environ)
     try:
@@ -123,34 +124,22 @@ def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
         
 
 
-#	run_first_level_analysis(ptseries_file, subj_id, ses_id, output_dir, regressor_file)
 def main():
     
-    # TODO: shore up how to handle this within container
-    #tasknames=['task-rest_acq-eyesopenbeforePA_run-02_bold', 'task-rest_acq-eyesopenafterPA_run-03_bold']
-    #ptseries_files = [ ptseries_file for taskname in tasknames for ptseries_file in glob(os.path.join(output_dir, 'HCP_output','sub-' + subj_id, 'ses-' + ses_id, 'MNINonLinear', 'Results', 'sub-' + subj_id + '_ses-' + ses_id + '_' + taskname, 'RestingStateStats',  'sub-' +subj_id + '_ses-' + ses_id + '_' + taskname + '_Atlas_MSMAll_2_d40_WRN_hp2000_clean.ptseries.nii'))]
-
-   # df['LGN_avg'] = df[[('L_Lateral_Geniculum_Body',),('R_Lateral_Geniculum_Body',)]].mean(axis=1)
-	# df.to_csv(os.path.join(RSS_folder,LGN_file),header=False,index=False,columns=['LGN_avg'],sep=' ')
-    
-    #organize variables based on # of ROIs and seed handling
     if len(args.seed_ROI_name) > 1:
         if args.seed_handling == "together":
             seed_ROI_merged_string = "-".join(str(x) for x in args.seed_ROI_name)
             seed_ROI_name = args.seed_ROI_name
             regressor_file = seed_ROI_merged_string + '-AvgRegressor.txt' 
             regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
-            #run_first_level_analysis(cifti_file, subj_id, ses_id, output_dir, fsf_rsfMRI_folder, regressor_file_path)
         elif  args.seed_handling == "separate":
             for seed_ROI_name in args.seed_ROI_name:
                 regressor_file = seed_ROI_name + '-Regressor.txt'
                 regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
-                #run_first_level_analysis(cifti_file, subj_id, ses_id, output_dir, fsf_rsfMRI_folder, regressor_file_path)
     else:
         seed_ROI_name = args.seed_ROI_name[0]
         regressor_file = seed_ROI_name + '-Regressor.txt'
         regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
-        #run_first_level_analysis(cifti_file, subj_id, ses_id, output_dir, fsf_rsfMRI_folder, regressor_file_path)
 
 main()
  
