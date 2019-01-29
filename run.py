@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/opt/Anaconda2/bin/python
+
 from __future__ import print_function
 import argparse
 import os
@@ -40,7 +41,7 @@ def run_Generatefsf_processing(**args):
         '--outdir="{path}/{subject}/MNINonLinear/Results/{fmriname}" '
     cmd = cmd.format(**args)
     run(cmd, cwd=args["path"], env={"OMP_NUM_THREADS": str(args["n_cpus"])})
-    fsf_file = "{path}/{subject}/MNINonLinear/Results/{fmriname}/{shorttaskname}_hp200_s2_level1.fsf" 
+    fsf_file = "{path}/{subject}/MNINonLinear/Results/{fmriname}/{shorttaskname}_hp200_s2_level1.fsf"
     #feat_file = "../_%s_%s_hp2000_clean.nii.gz" % (subj_id, ses_id, taskname)  # TODO: work on how to handle this
     with open(fsf_file, 'r') as file:
         filedata = file.read()
@@ -54,9 +55,9 @@ def run_Generatefsf_processing(**args):
         file.write(filedata)
 
 
-def run_seed_correlation_rsfMRI_processing(**args):
+def run_create_seed_regressor_processing(**args):
     args.update(os.environ)
-    
+
 
 
 def run_seed_FirstLevel_rsfMRI_processing(**args):
@@ -104,13 +105,13 @@ parser.add_argument('--session_label', help='The label of the session that shoul
                    'corresponds to ses-<session_label> from the BIDS spec '
                    '(so it does not include "ses-"). If this parameter is not '
                    'provided all sessions within a subject should be analyzed.',
-                   nargs="+")   
+                   nargs="+")
 parser.add_argument('--fsf_template_folder', help='Space separated folders to be used to perform 1st level Task fMRI Analysis.'
                                                  'The folder must have the following naming scheme: "task name" with "task_name" being the immediate text following "task-" and prior to the '
                                                  'following "_". ')
 parser.add_argument('--stages', help='Which stages to run. Space separated list. ',
-                   nargs="+", choices=['rsfMRISeedAnalysis', 'Generatefsf'],
-                   default=['rsfMRISeedAnalysis', 'Generatefsf'])
+                   nargs="+", choices=['rsfMRISeedAnalysis', 'create_seed_regressor', 'Generatefsf'],
+                   default=['create_seed_regressor', 'Generatefsf', 'rsfMRISeedAnalysis'])
 parser.add_argument('--coreg', help='Coregistration method to use ',
                     choices=['MSMSulc', 'FS'], default='MSMSulc')
 parser.add_argument('--parcellation_file', help='The CIFTI label file to use or used to parcellate the brain. ')
@@ -144,7 +145,7 @@ else:
 # running participant level
 if args.analysis_level == "participant":
     for subject_label in subjects_to_analyze:
-        
+
         # if subject label has sessions underneath those need to be outputted into different directories
         if glob(os.path.join(args.bids_dir, "sub-" + subject_label, "ses-*")):
             ses_dirs = glob(os.path.join(args.bids_dir, "sub-" + subject_label, "ses-*"))
@@ -181,7 +182,11 @@ if args.analysis_level == "participant":
                                         in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
                                      highpass=2000
                                      templatedir = os.path.join(args.fsf_template_folder,shortfmriname)
-                                     task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
+                                     task_stages_dict = OrderedDict([("create_seed_regressor", partial(run_create_seed_regressor_processing,
+                                                                                                       path=args.output_dir + "/sub-%s" % (subject_label),
+                                                                                                       ))
+
+                                                        ("Generatefsf", partial(run_Generatefsf_processing,
                                                                                 path=args.output_dir + "/sub-%s" % (subject_label),
                                                                                 n_cpus=args.n_cpus,
                                                                                 subject="ses-%s" % (ses_label),
@@ -223,13 +228,13 @@ if args.analysis_level == "participant":
                                                     extensions=["nii.gz", "nii"])]
             for fmritcs in bolds:
                 fmriname = "_".join(fmritcs.split("sub-")[-1].split("_")[1:]).split(".")[0]
-                assert fmriname                
+                assert fmriname
                 zooms = nibabel.load(fmritcs).get_header().get_zooms()
                 reptime = float("%.1f" % zooms[3])
                 fmrires = float(min(zooms[:3]))
                 fmrires = "2"
                 if 'rest' in fmriname:
-                    highpass=2000                    
+                    highpass=2000
                     shortfmriname = fmriname.split("_")[2].split("-")[1]
                     if args.fsf_template_folder == None:
                         raise Exception("If Generatefsf or rsfMRISeedAnalysis is to be run --fsf_template_dir cannot be empty")

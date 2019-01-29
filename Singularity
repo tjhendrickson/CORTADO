@@ -60,7 +60,29 @@ touch /parcel_dlabel.nii
 
 # Install basic utilities
 apt-get -qq update
-apt-get install -yq --no-install-recommends wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl
+apt-get install -yq --no-install-recommends python wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl
+
+# Install FSL 5.0.11
+apt-get update
+cd /tmp
+wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
+python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
+export FSLDIR=/usr/local/fsl
+. ${FSLDIR}/etc/fslconf/fsl.sh
+PATH=${FSLDIR}/bin:${PATH}
+${FSLDIR}/etc/fslconf/fslpython_install.sh
+
+# Install HCP Pipelines v3.27.0
+apt-get update
+wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
+cd /opt/
+mkdir /opt/HCP-Pipelines
+tar zxf /opt/pipelines.tar.gz -C /opt/HCP-Pipelines --strip-components=1
+rm /opt/pipelines.tar.gz
+wget -qO- https://www.doc.ic.ac.uk/~ecr05/MSM_HOCR_v2/MSM_HOCR_v2-download.tgz | tar xz -C /tmp
+mv /tmp/homes/ecr05/MSM_HOCR_v2/Ubuntu /opt/HCP-Pipelines/MSMBinaries
+apt-get clean
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install anaconda and needed python tools
 cd /opt
@@ -79,28 +101,6 @@ apt-get install -y nodejs
 npm install -g bids-validator@0.26.11
 /opt/Anaconda2/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
 
-
-# Install FSL 5.0.11
-apt-get update
-cd /tmp
-wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
-/opt/Anaconda2/bin/python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
-export FSLDIR=/usr/local/fsl
-. ${FSLDIR}/etc/fslconf/fsl.sh
-PATH=${FSLDIR}/bin:${PATH}
-${FSLDIR}/etc/fslconf/fslpython_install.sh
-
-# Install HCP Pipelines v3.27.0
-apt-get update
-wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
-cd /opt/
-mkdir /opt/HCP-Pipelines
-tar zxf /opt/pipelines.tar.gz -C /opt/HCP-Pipelines --strip-components=1
-rm /opt/pipelines.tar.gz
-wget -qO- https://www.doc.ic.ac.uk/~ecr05/MSM_HOCR_v2/MSM_HOCR_v2-download.tgz | tar xz -C /tmp
-mv /tmp/homes/ecr05/MSM_HOCR_v2/Ubuntu /opt/HCP-Pipelines/MSMBinaries
-apt-get clean
-rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy needed files into container
 cp /generate_level1_fsf.sh /opt/HCP-Pipelines/Examples/Scripts/

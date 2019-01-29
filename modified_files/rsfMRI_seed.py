@@ -14,17 +14,7 @@ import pdb
 
 # For testing: ./rsfMRI_seed.py --output_dir /home/timothy/Projects/263_ETOH_tDCS/HCP_output --participant_label 7859 --session_label 48920 --parcel_file /home/timothy/Github/BIDShcppipelines/modified_files/360CortSurf_19Vol_parcel.dlabel.nii --parcel_name Glasser --seed_ROI_name AMYGDALA_LEFT AMYGDALA_RIGHT --seed_handling together --cifti_file ~/Projects/263_ETOH_tDCS/HCP_output/sub-7859/ses-48920/MNINonLinear/Results/sub-7859_ses-48920_task-rest_acq-eyesopenbeforePA_run-02_bold/RestingStateStats/sub-7859_ses-48920_task-rest_acq-eyesopenbeforePA_run-02_bold_Atlas_MSMAll_2_d40_WRN_hp2000_clean.ptseries.nii
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--output_dir', help='The directory where the output files '
-                    'should be stored. If you are running group level analysis '
-                    'this folder should be prepopulated with the results of the'
-                    'participant level analysis.')
-parser.add_argument('--participant_label', help='The label of the participant that should be analyzed. The label '
-                   'corresponds to sub-<participant_label> or ses-<participant_label from the BIDS spec '
-                   '(so it does not include "sub-" or "ses-"). ',
-                   nargs="+")
-parser.add_argument('--coreg', help='Coregistration method used ',
-                    choices=['MSMSulc', 'FS'], default='MSMSulc')
-parser.add_argument('--cifti_file', help='The CIFTI file to pull the seed timeseries from. Can either be a dtseries or ptseries file.')
+parser.add_argument('--cifti_file', help='The CIFTI file to pull the seed time series from. Can either be a dtseries or ptseries file.')
 parser.add_argument('--parcel_file', help='The CIFTI label file to use or used to parcellate the brain. ')
 parser.add_argument('--parcel_name', help='Shorthand name of the CIFTI label file. ')
 parser.add_argument('--fsf_rsfMRI_folder', help="folder containing templae fsf files to run first level rsfMRI seed analysis.")
@@ -35,10 +25,7 @@ parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do y
 args = parser.parse_args()
 
 #global variables from arg parser
-output_dir = args.output_dir
 fsf_rsfMRI_folder = args.fsf_rsfMRI_folder
-subj_id = args.participant_label
-ses_id = args.session_label
 parcel_file = args.parcel_file
 read_parcel_file = cifti.read(parcel_file)
 parcel_file_label_tuple = read_parcel_file[1][0][0][1]
