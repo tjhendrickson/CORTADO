@@ -67,7 +67,8 @@ cd /opt
 wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
 bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
 export PATH="/opt/Anaconda2/bin:${PATH}"
-/opt/Anaconda2/bin/pip install certificates
+#is this necessary?
+#/opt/Anaconda2/bin/pip install certificates
 
 # Install the validator 0.26.11, along with pybids 0.6.0
 apt-get update

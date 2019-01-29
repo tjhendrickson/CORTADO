@@ -19,17 +19,10 @@ parser.add_argument('--output_dir', help='The directory where the output files '
                     'this folder should be prepopulated with the results of the'
                     'participant level analysis.')
 parser.add_argument('--participant_label', help='The label of the participant that should be analyzed. The label '
-                   'corresponds to sub-<participant_label> from the BIDS spec '
-                   '(so it does not include "sub-"). If this parameter is not '
-                   'provided all subjects should be analyzed. Multiple '
-                   'participants can be specified with a space separated list.',
+                   'corresponds to sub-<participant_label> or ses-<participant_label from the BIDS spec '
+                   '(so it does not include "sub-" or "ses-"). ',
                    nargs="+")
-parser.add_argument('--session_label', help='The label of the session that should be analyzed. The label '
-                   'corresponds to ses-<session_label> from the BIDS spec '
-                   '(so it does not include "ses-"). If this parameter is not '
-                   'provided all sessions within a subject should be analyzed.',
-                   nargs="+")   
-parser.add_argument('--coreg', help='Coregistration method to use ',
+parser.add_argument('--coreg', help='Coregistration method used ',
                     choices=['MSMSulc', 'FS'], default='MSMSulc')
 parser.add_argument('--cifti_file', help='The CIFTI file to pull the seed timeseries from. Can either be a dtseries or ptseries file.')
 parser.add_argument('--parcel_file', help='The CIFTI label file to use or used to parcellate the brain. ')
@@ -46,7 +39,7 @@ output_dir = args.output_dir
 fsf_rsfMRI_folder = args.fsf_rsfMRI_folder
 subj_id = args.participant_label
 ses_id = args.session_label
-parcel_file = args.parcel_file 
+parcel_file = args.parcel_file
 read_parcel_file = cifti.read(parcel_file)
 parcel_file_label_tuple = read_parcel_file[1][0][0][1]
 parcel_labels = []
@@ -80,7 +73,7 @@ def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, fsf_rsfMRI
         cmd = '%s/ROI_rsfMRIAnalysisBatch.sh --StudyFolder="%s/HCP_output/%s" --Subjlist="%s" --seedROI="%s" --TaskName="%s" --runlocal' % (current_dir, output_dir, subj_id, ses_id, regressor_file.split(".")[0],taskname)
         process = Popen(shlex.split(cmd), stdout=PIPE)
         process.communicate()
-"""	
+"""
 def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
     #args.update(os.environ)
     try:
@@ -89,7 +82,7 @@ def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
         print("file does not exist")
     except:
         print("file does not look like a cifti file")
-    
+
     #if not parcellated, first parcellate, then proceed to write regressor
     cifti_file_basename = os.path.basename(cifti_file)
     cifti_file_folder = os.path.dirname(cifti_file)
@@ -105,13 +98,13 @@ def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
             print("file does not exist")
         except:
             print("file does not look like a cifti file")
-    
-    pdb.set_trace()     
+
+    pdb.set_trace()
     regressor_file_path = os.path.join(cifti_file_folder,regressor_file)
-	
+
     #create regressor file
     df = pd.DataFrame(cifti_load.get_fdata())
-    
+
     df.columns = label_headers
     if type(seed_ROI_name) == str:
         df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_ROI_name],sep=' ')
@@ -121,16 +114,16 @@ def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
             df['avg'] = df[[seed_ROI_name[0],seed_ROI_name[1]]].mean(axis=1)
             df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
             return regressor_file_path
-        
+
 
 
 def main():
-    
+
     if len(args.seed_ROI_name) > 1:
         if args.seed_handling == "together":
             seed_ROI_merged_string = "-".join(str(x) for x in args.seed_ROI_name)
             seed_ROI_name = args.seed_ROI_name
-            regressor_file = seed_ROI_merged_string + '-AvgRegressor.txt' 
+            regressor_file = seed_ROI_merged_string + '-AvgRegressor.txt'
             regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
         elif  args.seed_handling == "separate":
             for seed_ROI_name in args.seed_ROI_name:
@@ -142,7 +135,7 @@ def main():
         regressor_file_path = write_regressor(cifti_file, parcel_labels, seed_ROI_name, regressor_file)
 
 main()
- 
+
 
 
 
