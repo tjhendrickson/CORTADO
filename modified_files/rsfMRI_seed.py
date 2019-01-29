@@ -26,6 +26,7 @@ args = parser.parse_args()
 
 #global variables from arg parser
 fsf_rsfMRI_folder = args.fsf_rsfMRI_folder
+parcel_name = args.parcel_name
 parcel_file = args.parcel_file
 read_parcel_file = cifti.read(parcel_file)
 parcel_file_label_tuple = read_parcel_file[1][0][0][1]
@@ -35,32 +36,7 @@ for idx, value in enumerate(parcel_file_label_tuple):
         if not '???' in parcel_file_label_tuple[idx][0]:
                 parcel_labels.append(parcel_file_label_tuple[idx][0])
 
-# TODO: incorporate this function into run.py, not needed here
-"""
-def run_first_level_analysis(ptseries_file, subj_id, ses_id, out_dir, fsf_rsfMRI_folder, regressor_file):
-    #args.update(os.environ)
-    taskname = ptseries_file.split("/")[-3]
-    cmd = '/opt/HCP-Pipelines/Examples/Scripts/generate_level1_fsf.sh --studyfolder="%s/HCP_output" --subject="%s" --session="%s" --taskname="%s" --templatedir="%s" --outdir="%s"' % (output_dir, subj_id, ses_id, taskname,current_dir,out_dir)
-    process = Popen(shlex.split(cmd), stdout=PIPE)
-    process.communicate()
-    exit_code = process.wait()
-    if exit_code == 0:
-        fsf_file = "%s/%s_hp200_s2_level1.fsf" % (out_dir, taskname)
-        feat_file = "../%s_%s_%s_hp2000_clean.nii.gz" % (subj_id, ses_id, taskname)
-        with open(fsf_file, 'r') as file:
-            filedata = file.read()
-            filedata = filedata.replace('REGRESSOR',regressor_file)
-        with open(fsf_file, 'w') as file:
-            file.write(filedata)
-        with open(fsf_file, 'r') as file:
-            filedata = file.read()
-            filedata = filedata.replace('FEATFILE', feat_file)
-        with open(fsf_file, 'w') as file:
-            file.write(filedata)
-        cmd = '%s/ROI_rsfMRIAnalysisBatch.sh --StudyFolder="%s/HCP_output/%s" --Subjlist="%s" --seedROI="%s" --TaskName="%s" --runlocal' % (current_dir, output_dir, subj_id, ses_id, regressor_file.split(".")[0],taskname)
-        process = Popen(shlex.split(cmd), stdout=PIPE)
-        process.communicate()
-"""
+
 def write_regressor(cifti_file,label_headers, seed_ROI_name, regressor_file):
     #args.update(os.environ)
     try:
