@@ -62,12 +62,28 @@ touch /parcel_dlabel.nii
 apt-get -qq update
 apt-get install -yq --no-install-recommends wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl
 
+# Install anaconda and needed python tools
+cd /opt
+wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
+bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
+export PATH="/opt/Anaconda2/bin:${PATH}"
+/opt/Anaconda2/bin/pip install certificates
+
+# Install the validator 0.26.11, along with pybids 0.6.0
+apt-get update
+apt-get install -y curl
+curl -sL https://deb.nodesource.com/setup_10.x | bash -
+apt-get remove -y curl
+apt-get install -y nodejs
+npm install -g bids-validator@0.26.11
+/opt/Anaconda2/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
+
 
 # Install FSL 5.0.11
 apt-get update
 cd /tmp
 wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
-python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
+/opt/Anaconda2/bin/python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
 export FSLDIR=/usr/local/fsl
 . ${FSLDIR}/etc/fslconf/fsl.sh
 PATH=${FSLDIR}/bin:${PATH}
@@ -97,21 +113,6 @@ wget http://brainvis.wustl.edu/workbench/workbench-rh_linux64-dev_latest.zip
 unzip workbench-rh_linux64-dev_latest.zip
 export PATH=/opt/workbench/bin_rh_linux64:${PATH}
 
-# Install anaconda and needed python tools
-cd /opt
-wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
-bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
-export PATH="/opt/Anaconda2/bin:${PATH}"
-/opt/Anaconda2/bin/pip install certificates
-
-# Install the validator 0.26.11, along with pybids 0.6.0
-apt-get update
-apt-get install -y curl
-curl -sL https://deb.nodesource.com/setup_10.x | bash -
-apt-get remove -y curl
-apt-get install -y nodejs
-npm install -g bids-validator@0.26.11
-/opt/Anaconda2/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
 
 # Upgrade our libstdc++
 echo "deb http://ftp.de.debian.org/debian stretch main" >> /etc/apt/sources.list
