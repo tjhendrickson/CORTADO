@@ -4,13 +4,14 @@ from __future__ import print_function
 import argparse
 import os
 import shutil
-import nibabel
+#import nibabel
 from glob import glob
 from subprocess import Popen, PIPE
 import subprocess
 from bids.grabbids import BIDSLayout
 from functools import partial
 from collections import OrderedDict
+import pdb
 
 
 def run(command, env={}, cwd=None):
@@ -82,9 +83,10 @@ def run_Generatefsf_processing(**args):
 
 
 def run_create_seed_regressor_processing(**args):
-    args.update(os.environ)
-    cmd = '/rsfMRI_seed.py ' +
-        '--cifti_file="{path}/{subj_id}/{ses_id}/MNINonLinear/Results/{fmriname}
+    pass
+    #args.update(os.environ)
+    #cmd = '/rsfMRI_seed.py ' +
+    #    '--cifti_file="{path}/{subj_id}/{ses_id}/MNINonLinear/Results/{fmriname}
 
 def run_seed_FirstLevel_rsfMRI_processing(**args):
     args.update(os.environ)
@@ -146,6 +148,7 @@ parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s 
 parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do you want to treat them as together (i.e. averaging ROIs together), or separate (run separate seed based analyses for each ROI)? '
                                         'Choices are "together", or "separate". Default argument is "separate".',
                         choices=['together', 'separate'], default='separate')
+pdb.set_trace()
 
 args = parser.parse_args()
 grayordinatesres = "2" # This is currently the only option for which there is an atlas
@@ -213,13 +216,13 @@ if args.analysis_level == "participant":
                                      #find cifti file, with preference given to ptseries files
                                      if os.path.isfile(os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")):
                                          cifti_file = os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")
-                                     elif: os.path.isfile(os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, "RestingStateStats" fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii"))
-                                         cifti_file = os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, "RestingStateStats" fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")
+                                     elif os.path.isfile(os.path.join(output_dir, "sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, "RestingStateStats", fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")):
+                                         cifti_file = os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, "RestingStateStats", fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")
                                      elif os.path.isfile(os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean.dtseries.nii")):
-                                         cifti_file = os.path.isfile(os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean.dtseries.nii")
+                                         cifti_file = os.path.join(output_dir,"sub-" + subj_id, "ses-" + ses_id, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean.dtseries.nii")
                                      else:
                                          raise Exception("cannot find cifti file, must exit")
-                                    task_stages_dict = OrderedDict([("create_seed_regressor", partial(run_create_seed_regressor_processing,
+                                     task_stages_dict = OrderedDict([("create_seed_regressor", partial(run_create_seed_regressor_processing,
                                                                                                        output_dir=args.output_dir,
                                                                                                        subj_id="sub-%s" % (subject_label),
                                                                                                        ses_id="ses-%s" % (ses_label),
