@@ -74,8 +74,8 @@ ${FSLDIR}/etc/fslconf/fslpython_install.sh
 
 # Install HCP Pipelines v3.27.0
 apt-get update
-wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
 cd /opt/
+wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
 mkdir /opt/HCP-Pipelines
 tar zxf /opt/pipelines.tar.gz -C /opt/HCP-Pipelines --strip-components=1
 rm /opt/pipelines.tar.gz
