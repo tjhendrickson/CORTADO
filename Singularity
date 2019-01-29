@@ -63,13 +63,6 @@ apt-get -qq update
 apt-get install -yq --no-install-recommends wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl
 
 
-# Install anaconda 
-cd /opt
-wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
-bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
-export PATH="/opt/Anaconda2/bin:${PATH}"
-
-
 # Install FSL 5.0.11
 apt-get update
 cd /tmp
@@ -113,7 +106,11 @@ apt-get install -y nodejs
 npm install -g bids-validator@0.26.11
 pip install git+https://github.com/INCF/pybids.git@0.6.0
 
-# Install needed python tools
+# Install anaconda and needed python tools
+cd /opt
+wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
+bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
+export PATH="/opt/Anaconda2/bin:${PATH}"
 /opt/Anaconda2/bin/pip install certificates
 
 
