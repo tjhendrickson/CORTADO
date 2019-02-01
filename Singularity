@@ -63,13 +63,6 @@ apt-get -qq update
 apt-get install -yq --no-install-recommends python wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libfreetype6 libfreetype6-dev
 
 
-# Install anaconda 
-cd /opt
-wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
-bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
-export PATH="/opt/Anaconda2/bin:${PATH}"
-
-
 # Install FSL 5.0.11
 apt-get update
 cd /tmp
