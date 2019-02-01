@@ -60,7 +60,7 @@ touch /parcel_dlabel.nii
 
 # Install basic utilities
 apt-get -qq update
-apt-get install -yq --no-install-recommends wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libfreetype6 libfreetype6-dev libfreetype6-udeb
+apt-get install -yq --no-install-recommends python wget bc bzip2 ca-certificates curl libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libfreetype6 libfreetype6-dev libfreetype6-udeb
 
 
 # Install anaconda 
@@ -82,8 +82,8 @@ ${FSLDIR}/etc/fslconf/fslpython_install.sh
 
 # Install HCP Pipelines v3.27.0
 apt-get update
-wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
 cd /opt/
+wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
 mkdir /opt/HCP-Pipelines
 tar zxf /opt/pipelines.tar.gz -C /opt/HCP-Pipelines --strip-components=1
 rm /opt/pipelines.tar.gz
@@ -91,6 +91,25 @@ wget -qO- https://www.doc.ic.ac.uk/~ecr05/MSM_HOCR_v2/MSM_HOCR_v2-download.tgz |
 mv /tmp/homes/ecr05/MSM_HOCR_v2/Ubuntu /opt/HCP-Pipelines/MSMBinaries
 apt-get clean
 rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install anaconda and needed python tools
+cd /opt
+wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
+bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
+export PATH="/opt/Anaconda2/bin:${PATH}"
+/opt/Anaconda2/bin/pip install nibabel cifti pandas
+#is this necessary?
+#/opt/Anaconda2/bin/pip install certificates
+
+# Install the validator 0.26.11, along with pybids 0.6.0
+apt-get update
+apt-get install -y curl
+curl -sL https://deb.nodesource.com/setup_10.x | bash -
+apt-get remove -y curl
+apt-get install -y nodejs
+npm install -g bids-validator@0.26.11
+/opt/Anaconda2/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
+
 
 # Copy needed files into container
 cp /generate_level1_fsf.sh /opt/HCP-Pipelines/Examples/Scripts/
@@ -103,18 +122,6 @@ cd /opt
 wget http://brainvis.wustl.edu/workbench/workbench-rh_linux64-dev_latest.zip
 unzip workbench-rh_linux64-dev_latest.zip
 export PATH=/opt/workbench/bin_rh_linux64:${PATH}
-
-# Install the validator 0.26.11, along with pybids 0.6.0
-apt-get update
-apt-get install -y curl
-curl -sL https://deb.nodesource.com/setup_10.x | bash -
-apt-get remove -y curl
-apt-get install -y nodejs
-npm install -g bids-validator@0.26.11
-pip install git+https://github.com/INCF/pybids.git@0.6.0
-
-# Install needed python tools
-/opt/Anaconda2/bin/pip install certificates
 
 
 # Upgrade our libstdc++
