@@ -35,7 +35,6 @@ usage() {
 
 }
 
-#
 # Function description
 #  Get the command line options for this script
 #
@@ -175,7 +174,7 @@ main() {
     get_options $@
 
     # figure out where the task image file is
-    taskfiles=`ls ${StudyFolder}/${Subject}/${Session}/MNINonLinear/Results/${Subject}_${Session}_${taskname}/${Subject}_${Session}_${taskname}_hp2000_clean.nii.gz`
+    taskfiles=`ls ${StudyFolder}/${Subject}/${Session}/MNINonLinear/Results/${Subject}_${Session}_${taskname}*/${Subject}_${Session}_${taskname}_*hp2000_clean.nii.gz`
 	for taskfile in $taskfiles;
 	do
 	    taskfile_base=`basename $taskfile`
@@ -194,12 +193,12 @@ main() {
 	    cp -p ${fsf_template_file} ${outdir}/${Subject}_${Session}_${taskname}_hp200_s2_level1.fsf
 
 	    # modify the destination by putting in the correct number of time points
-	    sed -i "s/fmri(npts) [0-9]*/fmri(npts) ${FMRI_NPTS}/" ${outdir}/${taskname}_hp200_s2_level1.fsf
-	    sed -i "s:FEATFILES:${taskfile_base}:g" ${outdir}/${taskname}_hp200_s2_level1.fsf
+	    sed -i "s/fmri(npts) [0-9]*/fmri(npts) ${FMRI_NPTS}/" ${outdir}/${Subject}_${Session}_${taskname}_hp200_s2_level1.fsf
+	    sed -i "s:FEATFILES:${taskfile_base}:g" ${outdir}/${Subject}_${Session}_${taskname}_hp200_s2_level1.fsf
 
 	    echo ""
 	    echo "Level 1 FSF file generated at: "
-	    echo "  ${outdir}/${taskname}_hp200_s2_level1.fsf"
+	    echo "  ${outdir}/${Subject}_${Session}_${taskname}_hp200_s2_level1.fsf"
 	    echo ""
        done
 }
