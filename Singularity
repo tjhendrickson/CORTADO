@@ -33,7 +33,7 @@ export FIX_VERTEX_AREA=
 export FSF_OUTPUT_FORMAT=nii.gz
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
 export PYTHONPATH=""
-export FSLDIR=/usr/share/fsl/5.0
+export FSLDIR=/usr/local/fsl
 export FSL_DIR="${FSLDIR}"
 export FSLOUTPUTTYPE=NIFTI_GZ
 export PATH=/usr/lib/fsl/5.0:$PATH
@@ -67,7 +67,7 @@ wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
 python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
 export FSLDIR=/usr/local/fsl
 . ${FSLDIR}/etc/fslconf/fsl.sh
-PATH=${FSLDIR}/bin:${PATH}
+export PATH=${FSLDIR}/bin:${PATH}
 ${FSLDIR}/etc/fslconf/fslpython_install.sh
 
 # Install HCP Pipelines v3.27.0
