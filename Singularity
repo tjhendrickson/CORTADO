@@ -46,9 +46,6 @@ export FSLOUTPUTTYPE=NIFTI_GZ
 
 %post
 
-# Make script executable
-chmod +x /run.py
-
 # Make local folders/files
 mkdir /share
 mkdir /scratch
@@ -121,6 +118,9 @@ export PATH=/opt/workbench/bin_rh_linux64:${PATH}
 echo "deb http://ftp.de.debian.org/debian stretch main" >> /etc/apt/sources.list
 apt-get update
 apt-get install -y --force-yes libstdc++6 nano
+
+# Make scripts executable
+chmod +x -R /run.py /rsfMRI_seed.py /opt/HCP-Pipelines
 
 %runscript
 
