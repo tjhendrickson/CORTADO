@@ -189,7 +189,7 @@ for LevelOnefMRIName in $( echo $LevelOnefMRINames | sed 's/@/ /g' ) ; do
 	# Get corresponding fsf name from $LevelOnefsfNames list
 	LevelOnefsfName=`echo $LevelOnefsfNames | cut -d "@" -f $i`
 	log_Msg "MAIN: RUN_LEVEL1: Issuing command: /opt/HCP-Pipelines/TaskfMRIAnalysis/RestfMRILevel1.sh $Subject $ResultsFolder $ROIsFolder $DownSampleFolder $LevelOnefMRIName $LevelOnefsfName $LowResMesh $GrayordinatesResolution $OriginalSmoothingFWHM $Confound $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation $ParcellationFile $seedROI"
-	/opt/HCP-Pipelines/TaskfMRIAnalysis//RestfMRILevel1.sh \
+	/opt/HCP-Pipelines/TaskfMRIAnalysis/RestfMRILevel1.sh \
 	  $Subject \
 	  $ResultsFolder \
 	  $ROIsFolder \

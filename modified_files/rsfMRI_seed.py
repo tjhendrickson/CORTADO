@@ -14,6 +14,7 @@ def write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file):
     print('seed_ROI_name: ' + str(seed_ROI_name))
     print('regressor_file: ' + regressor_file)
     
+        
     read_parcel_file = cifti.read(parcel_file)
     parcel_file_label_tuple = read_parcel_file[1][0][0][1]
     parcel_labels = []
@@ -54,13 +55,11 @@ def write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file):
     #create regressor file
     df = pd.DataFrame(cifti_load.get_fdata())
     df.columns = parcel_labels
-
-    if len(seed_ROI_name) == 1:
+    if type(seed_ROI_name) == str:
         df.to_csv(regressor_file_path,header=False,index=False,columns=[seed_ROI_name],sep=' ')
     else:
-        if len(seed_ROI_name) > 1:
-            df['avg'] = df[seed_ROI_name].mean(axis=1)
-            df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
+        df['avg'] = df[seed_ROI_name].mean(axis=1)
+        df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
 
 
 

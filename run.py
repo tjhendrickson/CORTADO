@@ -32,13 +32,13 @@ def run(command, env={}, cwd=None):
 
 
 def run_Generatefsf_processing(**args):
-    pdb.set_trace()
     args.update(os.environ)
-    #cmd = '{HCPPIPEDIR}/Examples/Scripts/generate_level1_fsf.sh ' + \
-    cmd = '/home/range2-raid1/timothy/GitHub/BIDS_hcp_rsfMRI_seed_analysis/modified_files/generate_level1_fsf.sh ' + \
+    cmd = '{HCPPIPEDIR}/Examples/Scripts/generate_level1_fsf.sh ' + \
         '--studyfolder="{path}" ' + \
         '--subject="{subject}" ' + \
         '--taskname="{shortfmriname}" ' + \
+        '--temporalfilter="{highpass}" ' + \
+        '--originalsmoothing="{fmrires}" ' + \
         '--regressor_file="{regressor_file}" ' + \
         '--templatedir="{templatedir}" ' + \
         '--outdir="{path}/{subject}/MNINonLinear/Results/{fmriname}" '
@@ -47,15 +47,16 @@ def run_Generatefsf_processing(**args):
         
 def run_seed_FirstLevel_rsfMRI_processing(**args):
     args.update(os.environ)
-    cmd = '/home/range2-raid1/timothy/GitHub/BIDS_hcp_rsfMRI_seed_analysis/modified_files/RestfMRIAnalysis.sh ' + \
+    os.system("export PATH=/usr/local/fsl/bin:${PATH}")
+    cmd = '{HCPPIPEDIR}/TaskfMRIAnalysis/RestfMRIAnalysis.sh ' + \
         '--path="{path}" ' + \
         '--subject="{subject}" ' + \
         '--lvl1tasks="{fmriname}" ' + \
-        '--lvl1fsfs="{shortfmriname}_hp200_s2_level1.fsf" ' + \
+        '--lvl1fsfs="{shortfmriname}" ' + \
         '--lvl2task="{level_2_task}" ' + \
         '--lvl2fsf="{level_2_fsf}" ' + \
         '--lowresmesh="{lowresmesh:d}" ' + \
-        '--grayordinatesres="{grayordinatesres:s}" ' + \
+        '--grayordinatesres="{fmrires:s}" ' + \
         '--origsmoothingFWHM="{fmrires:s}" ' + \
         '--confound="NONE" ' + \
         '--finalsmoothingFWHM="{smoothing:d}" ' + \
@@ -93,8 +94,6 @@ parser.add_argument('--stages',
                     help='Which stages to run. Space separated list. ',
                    nargs="+", choices=['rsfMRISeedAnalysis', 'Generatefsf'],
                    default=['Generatefsf', 'rsfMRISeedAnalysis'])
-parser.add_argument('--coreg', help='Coregistration method to use ',
-                    choices=['MSMSulc', 'FS'], default='MSMSulc')
 parser.add_argument('--smoothing',
                     help="What FWHM smoothing (in mm) to apply to final output",
                     default=4, type=int)
@@ -103,21 +102,27 @@ parser.add_argument('--parcellation_name', help='Shorthand name of the CIFTI lab
 parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s from CIFTI label file to be used as the seed ROI/s. The exact ROI from the label file must be known!', nargs="+")
 parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do you want to treat them as together (i.e. averaging ROIs together), or separate (run separate seed based analyses for each ROI)? '
                                         'Choices are "together", or "separate". Default argument is "separate".',
-                        choices=['together', 'separate'], default='separate')
+                                        choices=['together', 'separate'], 
+                                        default='separate')
+parser.add_argument('--seed_analysis_output', 
+                    help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',
+                    choices = ['dense','parcellated'], default = 'dense')
+                        
 
 args = parser.parse_args()
 
 # global variables
-grayordinatesres = "2" # This is currently the only option for which there is an atlas
+
+highpass = "2000"
 lowresmesh = 32
 highresmesh = 164
 smoothing = args.smoothing
 output_dir = args.output_dir
 parcel_file = args.parcellation_file
 parcel_name = args.parcellation_name
-regname = args.coreg
 seed_ROI_name = args.seed_ROI_name
 seed_handling = args.seed_handling
+seed_analysis_output = args.seed_analysis_output
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 
 # remove this for now
@@ -136,9 +141,14 @@ else:
 for subject_label in subjects_to_analyze:
 
     # if subject label has sessions underneath those need to be outputted into different directories
-    if glob(os.path.join(args.bids_dir, "sub-" + subject_label, "ses-*")):
+    if args.session_label:
+        ses_to_analyze = args.session_label
+    elif glob(os.path.join(args.bids_dir, "sub-" + subject_label, "ses-*")):
         ses_dirs = glob(os.path.join(args.bids_dir, "sub-" + subject_label, "ses-*"))
         ses_to_analyze = [ses_dir.split("-")[-1] for ses_dir in ses_dirs]
+    else:
+        ses_to_analyze = ""
+    if ses_to_analyze:
         for ses_label in ses_to_analyze:
             bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
                                                     type='bold',
@@ -157,16 +167,15 @@ for subject_label in subjects_to_analyze:
                     else:
                         fsf_templates = glob(os.path.join(args.fsf_template_folder, '*'))
                     if os.path.join(args.fsf_template_folder,shortfmriname) in fsf_templates:
-                        if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp200_s2_level2.fsf") \
+                        if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level2.fsf") \
                                 in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
                             level_2_task = shortfmriname + "_combined"
-                            level_2_fsf = shortfmriname + "_hp200_s2_level2.fsf"
+                            level_2_fsf = shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level2.fsf"
                         else:
-                            print("Second level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp200_s2_level2.fsf")
+                            print("Second level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp2000_s2_level2.fsf")
                             level_2_task = "NONE"
                             level_2_fsf = "NONE"
-                            if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp200_s2_level1.fsf") in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
-                                highpass=2000
+                            if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level1.fsf") in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
                                 templatedir = os.path.join(args.fsf_template_folder,shortfmriname)
                                 # find cifti file, with preference given to ptseries files
                                 if os.path.isfile(os.path.join(output_dir,"sub-" + subject_label, "ses-" + ses_label, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")):
@@ -185,11 +194,16 @@ for subject_label in subjects_to_analyze:
                                         write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file)
                                         if not regressor_file:
                                             raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                                        if seed_analysis_output == 'dense':
+                                            parcel_file = "NONE"
+                                            parcel_name = "NONE"    
                                         task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                                                  path=output_dir + "/sub-%s" % (subject_label),
                                                                                                  subject="ses-%s" % (ses_label),
                                                                                                  fmriname=fmriname,
                                                                                                  shortfmriname=shortfmriname,
+                                                                                                 highpass=highpass,
+                                                                                                 fmrires=fmrires,
                                                                                                  templatedir=templatedir,
                                                                                                  regressor_file=regressor_file)),
                                                                         ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
@@ -200,44 +214,48 @@ for subject_label in subjects_to_analyze:
                                                                                                        fmrires=fmrires,
                                                                                                        smoothing=smoothing,
                                                                                                        fmriname=fmriname,
-                                                                                                       grayordinatesres=grayordinatesres,
                                                                                                        parcel_file=parcel_file,
                                                                                                        parcel_name=parcel_name,
                                                                                                        temporal_filter=highpass,
-                                                                                                       regname=regname,
+                                                                                                       regname=msm_all_reg_name,
                                                                                                        level_2_task=level_2_task,
                                                                                                        level_2_fsf=level_2_fsf,
                                                                                                        seedROI=seed_ROI_merged_string))])
                                         for stage, stage_func in task_stages_dict.iteritems():
                                             if stage in args.stages:
                                                 stage_func()
-                                    elif seed_handling == "separate":
+                                    else:
                                         for seed in seed_ROI_name:
+                                            parcel_file = args.parcellation_file
+                                            parcel_name = args.parcellation_name
                                             regressor_file = seed + '-Regressor.txt'
                                             write_regressor(cifti_file, parcel_file, seed, regressor_file)
                                             if not regressor_file:
                                                 raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
-                                            
+                                            if seed_analysis_output == 'dense':
+                                                parcel_file = "NONE"
+                                                parcel_name = "NONE"    
                                             task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                             path=output_dir + "/sub-%s" % (subject_label),
                                                                             subject="ses-%s" % (ses_label),
                                                                             fmriname=fmriname,
                                                                             shortfmriname=shortfmriname,
+                                                                            highpass=highpass,
+                                                                            fmrires=fmrires,
                                                                             templatedir=templatedir,
                                                                             regressor_file=regressor_file)),
                                                     ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
                                                                                  path=output_dir + "/sub-%s" % (subject_label),
                                                                                  subject="ses-%s" % (ses_label),
                                                                                  lowresmesh=lowresmesh,
-                                                                                 shortfmriname=shortfmriname,
-                                                                                 fmrires=fmrires,                                                                                                       
+                                                                                 shortfmriname=shortfmriname,                                                                                                      
                                                                                  smoothing=smoothing,
                                                                                  fmriname=fmriname,
-                                                                                 grayordinatesres=grayordinatesres,
+                                                                                 fmrires=fmrires,
                                                                                  parcel_file=parcel_file,
                                                                                  parcel_name=parcel_name,
                                                                                  temporal_filter=highpass,
-                                                                                 regname=regname,
+                                                                                 regname=msm_all_reg_name,
                                                                                  level_2_task=level_2_task,
                                                                                  level_2_fsf=level_2_fsf,
                                                                                  seedROI=seed))])
@@ -245,39 +263,43 @@ for subject_label in subjects_to_analyze:
                                             for stage, stage_func in task_stages_dict.iteritems():
                                                 if stage in args.stages:
                                                     stage_func()
-                                    else:
-                                        regressor_file = seed_ROI_name + '-Regressor.txt'
-                                        write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file)
-                                        if not regressor_file:
-                                            raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
-                                        task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
+                                elif len(seed_ROI_name) == 1:
+                                    regressor_file = seed_ROI_name[0] + '-Regressor.txt'
+                                    write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file)
+                                    if not regressor_file:
+                                        raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                                    if seed_analysis_output == 'dense':
+                                        parcel_file = "NONE"
+                                        parcel_name = "NONE"    
+                                    task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                             path=output_dir + "/sub-%s" % (subject_label),
                                                                             subject="ses-%s" % (ses_label),
                                                                             fmriname=fmriname,
                                                                             shortfmriname=shortfmriname,
                                                                             templatedir=templatedir,
+                                                                            highpass=highpass,
+                                                                            fmrires=fmrires,
                                                                             regressor_file=regressor_file)),
                                                     ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
                                                                                  path=output_dir + "/sub-%s" % (subject_label),
                                                                                  subject="ses-%s" % (ses_label),
                                                                                  lowresmesh=lowresmesh,
                                                                                  shortfmriname=shortfmriname,
-                                                                                 fmrires=fmrires,
                                                                                  smoothing=smoothing,
                                                                                  fmriname=fmriname,
-                                                                                 grayordinatesres=grayordinatesres,
+                                                                                 fmrires=fmrires,
                                                                                  parcel_file=parcel_file,
                                                                                  parcel_name=parcel_name,
                                                                                  temporal_filter=highpass,
-                                                                                 regname=regname,
+                                                                                 regname=msm_all_reg_name,
                                                                                  level_2_task=level_2_task,
                                                                                  level_2_fsf=level_2_fsf,
-                                                                                 seedROI=seed_ROI_name))])
-                                        for stage, stage_func in task_stages_dict.iteritems():
-                                            if stage in args.stages:
-                                                stage_func()
+                                                                                 seedROI=seed_ROI_name[0]))])
+                                    for stage, stage_func in task_stages_dict.iteritems():
+                                        if stage in args.stages:
+                                            stage_func()
                             else:
-                                print("First level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp200_s2_level1.fsf")
+                                print("First level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level1.fsf")
                     else:
                         print(shortfmriname + " is not within the fsf_template_folder.")
     else:
@@ -289,32 +311,49 @@ for subject_label in subjects_to_analyze:
             assert fmriname
             zooms = nibabel.load(fmritcs).get_header().get_zooms()
             reptime = float("%.1f" % zooms[3])
-            fmrires = float(min(zooms[:3]))
-            fmrires = "2"
+            fmrires = str(float(min(zooms[:3])))
             if 'rest' in fmriname:
-                highpass=2000
                 shortfmriname = fmriname.split("_")[2].split("-")[1]
                 if args.fsf_template_folder == None:
                     raise Exception("If Generatefsf or rsfMRISeedAnalysis is to be run --fsf_template_dir cannot be empty")
                 else:
                     fsf_templates = glob(os.path.join(args.fsf_template_folder, '*'))
                 if os.path.join(args.fsf_template_folder,shortfmriname) in fsf_templates:
-                    if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp200_s2_level2.fsf") \
+                    if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level2.fsf") \
                             in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
                         level_2_task = shortfmriname + "_combined"
-                        level_2_fsf = shortfmriname + "_hp200_s2_level2.fsf"
+                        level_2_fsf = shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level2.fsf"
                     else:
-                        print("Second level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp200_s2_level2.fsf")
+                        print("Second level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level2.fsf")
                         level_2_task = "NONE"
                         level_2_fsf = "NONE"
-                        if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp200_s2_level1.fsf") \
-                                in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
-                            highpass=2000
+                        if os.path.join(args.fsf_template_folder,shortfmriname,shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level1.fsf") in glob(os.path.join(args.fsf_template_folder, shortfmriname, '*')):
                             templatedir = os.path.join(args.fsf_template_folder,shortfmriname)
-                            task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
+                            if os.path.isfile(os.path.join(output_dir,"sub-" + subject_label, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")):
+                                cifti_file = os.path.join(output_dir,"sub-" + subject_label, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")
+                            elif os.path.isfile(os.path.join(output_dir, "sub-" + subject_label, "MNINonLinear", "Results", fmriname, "RestingStateStats", fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")):
+                                cifti_file = os.path.join(output_dir,"sub-" + subject_label, "MNINonLinear", "Results", fmriname, "RestingStateStats", fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean_" + parcel_name + ".ptseries.nii")
+                            elif os.path.isfile(os.path.join(output_dir,"sub-" + subject_label, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean.dtseries.nii")):
+                                cifti_file = os.path.join(output_dir,"sub-" + subject_label, "MNINonLinear", "Results", fmriname, fmriname + "_Atlas_" + msm_all_reg_name + "_hp" + str(highpass) + "_clean.dtseries.nii")
+                            else:
+                                raise Exception("cannot find cifti file, must exit")
+                            if len(seed_ROI_name) > 1:
+                                if seed_handling == "together":
+                                    separator = "-"
+                                    seed_ROI_merged_string = separator.join(seed_ROI_name)
+                                    regressor_file = seed_ROI_merged_string + '-Regressor.txt'
+                                    write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file)
+                                    if not regressor_file:
+                                        raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                                    if seed_analysis_output == 'dense':
+                                        parcel_file = "NONE"
+                                        parcel_name = "NONE"
+                                    task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                         path=output_dir,
                                                                         subject="sub-%s" % (subject_label),
                                                                         fmriname=fmriname,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires,
                                                                         shortfmriname=shortfmriname,
                                                                         templatedir=templatedir)),
                                                 ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
@@ -324,15 +363,89 @@ for subject_label in subjects_to_analyze:
                                                                                 shortfmriname=shortfmriname,
                                                                                 fmrires=fmrires,
                                                                                 fmriname=fmriname,
-                                                                                grayordinatesres=grayordinatesres,
                                                                                 parcellation_file=parcel_file,
                                                                                 parcellation=parcel_name,
                                                                                 temporal_filter=highpass,
-                                                                                regname=regname,
+                                                                                regname=msm_all_reg_name,
                                                                                 level_2_task=level_2_task,
                                                                                 level_2_fsf=level_2_fsf))])
+    
+                                    for stage, stage_func in task_stages_dict.iteritems():
+                                            if stage in args.stages:
+                                                stage_func()
+                                else:
+                                    for seed in seed_ROI_name:
+                                        regressor_file = seed + '-Regressor.txt'
+                                        write_regressor(cifti_file, parcel_file, seed, regressor_file)
+                                        if not regressor_file:
+                                            raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                                        if seed_analysis_output == 'dense':
+                                            parcel_file = "NONE"
+                                            parcel_name = "NONE"    
+                                        task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
+                                                                        path=output_dir,
+                                                                        subject="sub-%s" % (subject_label),
+                                                                        fmriname=fmriname,
+                                                                        shortfmriname=shortfmriname,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires,
+                                                                        templatedir=templatedir,
+                                                                        regressor_file=regressor_file)),
+                                                ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
+                                                                             path=output_dir,
+                                                                             subject="sub-%s" % (subject_label),
+                                                                             lowresmesh=lowresmesh,
+                                                                             shortfmriname=shortfmriname,                                                                                                      
+                                                                             smoothing=smoothing,
+                                                                             fmriname=fmriname,
+                                                                             fmrires=fmrires,
+                                                                             parcel_file=parcel_file,
+                                                                             parcel_name=parcel_name,
+                                                                             temporal_filter=highpass,
+                                                                             regname=msm_all_reg_name,
+                                                                             level_2_task=level_2_task,
+                                                                             level_2_fsf=level_2_fsf,
+                                                                             seedROI=seed))])
+                                        for stage, stage_func in task_stages_dict.iteritems():
+                                            if stage in args.stages:
+                                                stage_func()
+                            elif len(seed_ROI_name) == 1:
+                                regressor_file = seed_ROI_name[0] + '-Regressor.txt'
+                                write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file)
+                                if not regressor_file:
+                                    raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                                if seed_analysis_output == 'dense':
+                                    parcel_file = "NONE"
+                                    parcel_name = "NONE"    
+                                task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
+                                                                        path=output_dir,
+                                                                        subject="sub-%s" % (subject_label),
+                                                                        fmriname=fmriname,
+                                                                        shortfmriname=shortfmriname,
+                                                                        templatedir=templatedir,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires,
+                                                                        regressor_file=regressor_file)),
+                                                ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
+                                                                             path=output_dir,
+                                                                             subject="sub-%s" % (subject_label),
+                                                                             lowresmesh=lowresmesh,
+                                                                             shortfmriname=shortfmriname,
+                                                                             smoothing=smoothing,
+                                                                             fmriname=fmriname,
+                                                                             fmrires=fmrires,
+                                                                             parcel_file=parcel_file,
+                                                                             parcel_name=parcel_name,
+                                                                             temporal_filter=highpass,
+                                                                             regname=msm_all_reg_name,
+                                                                             level_2_task=level_2_task,
+                                                                             level_2_fsf=level_2_fsf,
+                                                                             seedROI=seed_ROI_name[0]))])
+                                for stage, stage_func in task_stages_dict.iteritems():
+                                    if stage in args.stages:
+                                        stage_func()
                         else:
-                            print("First level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp200_s2_level1.fsf")
+                            print("First level fsf file for " + shortfmriname + " not provided. The naming must be " + shortfmriname + "_hp"+highpass+"_s"+fmrires+"_level1.fsf")
                 else:
                     print(shortfmriname + " is not within the fsf_template_folder.")
 
