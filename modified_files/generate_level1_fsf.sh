@@ -49,6 +49,10 @@ usage() {
 #  ${templatedir} - template directory
 #  ${outdir} - output directory
 #
+
+# Source fsl
+export PATH=/usr/local/fsl/bin:${PATH}
+
 get_options() {
     local scriptName=$(basename ${0})
     local arguments=($@)
