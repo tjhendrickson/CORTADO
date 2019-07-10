@@ -44,7 +44,7 @@ def run_Generatefsf_processing(**args):
         '--outdir="{path}/{subject}/MNINonLinear/Results/{fmriname}" '
     cmd = cmd.format(**args)
     run(cmd, cwd=args["path"])
-        
+
 def run_seed_FirstLevel_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
@@ -90,7 +90,7 @@ parser.add_argument('--preprocessing_type', help='BIDS-apps preprocessing pipeli
                    nargs="+")
 parser.add_argument('--use_ICA_outputs',help='Use ICA (whether FIX or AROMA) outputs in seed analysis. Choices include "Y/yes" or "N/no".',
 choices=['Yes','yes','No','no'],default='Yes')
-parser.add_argument('--stages', 
+parser.add_argument('--stages',
                     help='Which stages to run. Space separated list. ',
                    nargs="+", choices=['rsfMRISeedAnalysis', 'Generatefsf'],
                    default=['Generatefsf', 'rsfMRISeedAnalysis'])
@@ -102,15 +102,15 @@ parser.add_argument('--parcellation_name', help='Shorthand name of the CIFTI lab
 parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s from CIFTI label file to be used as the seed ROI/s. The exact ROI from the label file must be known!', nargs="+")
 parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do you want to treat them as together (i.e. averaging ROIs together), or separate (run separate seed based analyses for each ROI)? '
                                         'Choices are "together", or "separate". Default argument is "separate".',
-                                        choices=['together', 'separate'], 
+                                        choices=['together', 'separate'],
                                         default='separate')
-parser.add_argument('--combine_resting_scans', 
+parser.add_argument('--combine_resting_scans',
 help='If multiple of the same resting state BIDS file type exist should they be combined prior seed analysis? Choices include "Y/yes" or "N/no".',
 choices=['Yes','yes','No','no'],default='No')
-parser.add_argument('--seed_analysis_output', 
+parser.add_argument('--seed_analysis_output',
                     help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',
                     choices = ['dense','parcellated'], default = 'dense')
-                        
+
 
 args = parser.parse_args()
 
@@ -128,7 +128,8 @@ seed_analysis_output = args.seed_analysis_output
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 
 if args.participant_label:
-    layout = BIDSLayout(os.path.join(args.input_dir,'sub-'+subject_label))
+    subject_label=args.participant_label
+    layout = BIDSLayout(args.input_dir)
 else:
     raise ValueError('An argument must be specified for participant label. Quitting.')
 
@@ -144,24 +145,29 @@ if ses_to_analyze:
     for ses_label in ses_to_analyze:
         # retrieve preprocessing BIDS layout for participant specified
         if args.preprocessing_type == 'HCP':
-            try
-            bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
+
+            if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
+                bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
                                                 type='clean',
-                                                extensions=["nii.gz"])]
-        
+                                                extensions=["nii.gz"], task='rest')]
+            else:
+                # will need something like below except some xfms files are being returned as well
+                #layout.get(subject='9522',session='53781',extensions='nii.gz',task='rest',type='bold')
         elif args.preprocessing_type == 'fmriprep':
+            # this is a start, however, will need more advanced querying to separate non-ICA and ICA denoised outputs
+            #layout.get(subject=subject_label,session='preTherapyS12',extensions='nii.gz',type='bold',task='rest')
             bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
                                                 type='bold',
                                                 extensions=["nii.gz"])]
 
-        
+
         for fmritcs in bolds:
             fmriname = fmritcs.split("%s/func/" % ses_label)[-1].split(".")[0]
             assert fmriname
             zooms = nibabel.load(fmritcs).get_header().get_zooms()
             reptime = float("%.1f" % zooms[3])
             fmrires = str(int(min(zooms[:3])))
-            
+
             if 'rest' in fmriname:
                 shortfmriname = "_".join(fmriname.split("_")[2:4])
                 if args.fsf_template_folder == None:
@@ -198,7 +204,7 @@ if ses_to_analyze:
                                         raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                                     if seed_analysis_output == 'dense':
                                         parcel_file = "NONE"
-                                        parcel_name = "NONE"    
+                                        parcel_name = "NONE"
                                     task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                                                 path=output_dir + "/sub-%s" % (subject_label),
                                                                                                 subject="ses-%s" % (ses_label),
@@ -236,7 +242,7 @@ if ses_to_analyze:
                                             raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                                         if seed_analysis_output == 'dense':
                                             parcel_file = "NONE"
-                                            parcel_name = "NONE"    
+                                            parcel_name = "NONE"
                                         task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                         path=output_dir + "/sub-%s" % (subject_label),
                                                                         subject="ses-%s" % (ses_label),
@@ -250,7 +256,7 @@ if ses_to_analyze:
                                                                                 path=output_dir + "/sub-%s" % (subject_label),
                                                                                 subject="ses-%s" % (ses_label),
                                                                                 lowresmesh=lowresmesh,
-                                                                                shortfmriname=shortfmriname,                                                                                                      
+                                                                                shortfmriname=shortfmriname,
                                                                                 smoothing=smoothing,
                                                                                 fmriname=fmriname,
                                                                                 fmrires=fmrires,
@@ -261,7 +267,7 @@ if ses_to_analyze:
                                                                                 level_2_task=level_2_task,
                                                                                 level_2_fsf=level_2_fsf,
                                                                                 seedROI=seed))])
-                                                
+
                                         for stage, stage_func in task_stages_dict.iteritems():
                                             if stage in args.stages:
                                                 stage_func()
@@ -272,7 +278,7 @@ if ses_to_analyze:
                                     raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                                 if seed_analysis_output == 'dense':
                                     parcel_file = "NONE"
-                                    parcel_name = "NONE"    
+                                    parcel_name = "NONE"
                                 task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                         path=output_dir + "/sub-%s" % (subject_label),
                                                                         subject="ses-%s" % (ses_label),
@@ -383,7 +389,7 @@ else:
                                         raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                                     if seed_analysis_output == 'dense':
                                         parcel_file = "NONE"
-                                        parcel_name = "NONE"    
+                                        parcel_name = "NONE"
                                     task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                     path=output_dir,
                                                                     subject="sub-%s" % (subject_label),
@@ -397,7 +403,7 @@ else:
                                                                             path=output_dir,
                                                                             subject="sub-%s" % (subject_label),
                                                                             lowresmesh=lowresmesh,
-                                                                            shortfmriname=shortfmriname,                                                                                                      
+                                                                            shortfmriname=shortfmriname,
                                                                             smoothing=smoothing,
                                                                             fmriname=fmriname,
                                                                             fmrires=fmrires,
@@ -418,7 +424,7 @@ else:
                                 raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                             if seed_analysis_output == 'dense':
                                 parcel_file = "NONE"
-                                parcel_name = "NONE"    
+                                parcel_name = "NONE"
                             task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_processing,
                                                                     path=output_dir,
                                                                     subject="sub-%s" % (subject_label),
