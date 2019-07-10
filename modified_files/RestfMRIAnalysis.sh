@@ -5,18 +5,13 @@ set -x
 #~ND~FORMAT~MARKDOWN~
 #~ND~START~
 #
-# # TaskfMRIAnalysis.sh
+# # RestfMRIAnalysis.sh
 #
-# ## Copyright (C) 2015 The Human Connectome Project
-#
-# * Washington University in St. Louis
-# * University of Minnesota
-# # Oxford University
+# ## Copyright (c) 2011-2019 The Human Connectome Project and The Connectome Coordination Facility
 #
 # ## Author(s)
 #
-# * Timothy B. Brown, Neuroinformatics Research Group, Washington University in St. Louis
-#
+# * Timothy Hendrickson, University of Minnesota Informatics Institute, Minneapolis, Minnesota
 # ## Product
 #
 # [Human Connectome Project][HCP] (HCP) Pipelines
@@ -27,10 +22,7 @@ set -x
 #
 # ## Description
 #
-# This script is a simple dispatching script for running Task fMRI Analysis.  It determines what
-# version of [FSL][FSL] is installed and in use and then invokes either V1.0 of the Task fMRI Analysis
-# if the version of [FSL][FSL] is 5.0.6 or earlier or V2.0 of the Task fMRI Analysis if the version 
-# of [FSL][FSL] is 5.0.7 or later.
+# This script is a simple dispatching script for running Resting State Seed fMRI Analysis.
 #
 # The ${FSLDIR}/etc/fslversion file is used to determine the version of [FSL][FSL] in use.
 #
@@ -46,11 +38,6 @@ set -e
 
 
 ########################################## PREPARE FUNCTIONS ########################################## 
-
-# Load function libraries
-source ${HCPPIPEDIR}/global/scripts/log.shlib  # Logging related functions
-source ${HCPPIPEDIR}/global/scripts/opts.shlib # Command line option functions
-source ${HCPPIPEDIR}/global/scripts/fsl_version.shlib	# Function for getting FSL version
 
 
 # function to test FSL versions
@@ -124,7 +111,6 @@ opts_ShowVersionIfRequested $@
 # Parse expected arguments from command-line array
 log_Msg "READ_ARGS: Parsing Command Line Options"
 Path=`opts_GetOpt1 "--path" $@`
-Subject=`opts_GetOpt1 "--subject" $@`
 LevelOnefMRINames=`opts_GetOpt1 "--lvl1tasks" $@`
 LevelOnefsfNames=`opts_GetOpt1 "--lvl1fsfs" $@`
 LevelTwofMRIName=`opts_GetOpt1 "--lvl2task" $@`
@@ -144,7 +130,6 @@ seedROI=`opts_GetOpt1 "--seedROI" $@`
 
 # Write command-line arguments to log file
 log_Msg "READ_ARGS: Path: ${Path}"
-log_Msg "READ_ARGS: Subject: ${Subject}"
 log_Msg "READ_ARGS: LevelOnefMRINames: ${LevelOnefMRINames}"
 log_Msg "READ_ARGS: LevelOnefsfNames: ${LevelOnefsfNames}"
 log_Msg "READ_ARGS: LowResMesh: ${LowResMesh}"

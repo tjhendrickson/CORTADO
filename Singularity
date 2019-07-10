@@ -9,6 +9,7 @@ modified_files/generate_level1_fsf.sh /generate_level1_fsf.sh
 modified_files/RestfMRIAnalysis.sh /RestfMRIAnalysis.sh
 modified_files/RestfMRILevel1.sh /RestfMRILevel1.sh
 modified_files/rsfMRI_seed.py /rsfMRI_seed.py
+modified_file/task-rest_level1.fsf /task-rest_level1.fsf
 
 %environment
 
@@ -60,36 +61,22 @@ apt-get -qq update
 apt-get install -yq --no-install-recommends libglib2.0-0 python wget bc bzip2 ca-certificates libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libgl1-mesa-dev libfreetype6 libfreetype6-dev
 
 
-# Install FSL 5.0.11
+# Install FSL 6.0.1
 apt-get update
 cd /tmp
 wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
-python fslinstaller.py -d /usr/local/fsl -E -V 5.0.11 -q -D
+python fslinstaller.py -d /usr/local/fsl -E -V 6.0.1 -q -D
 export FSLDIR=/usr/local/fsl
 . ${FSLDIR}/etc/fslconf/fsl.sh
 export PATH=${FSLDIR}/bin:${PATH}
 ${FSLDIR}/etc/fslconf/fslpython_install.sh
 
-# Install HCP Pipelines v3.27.0
-apt-get update
-cd /opt/
-wget https://github.com/Washington-University/Pipelines/archive/v3.27.0.tar.gz -O pipelines.tar.gz
-mkdir /opt/HCP-Pipelines
-tar zxf /opt/pipelines.tar.gz -C /opt/HCP-Pipelines --strip-components=1
-rm /opt/pipelines.tar.gz
-wget -qO- https://www.doc.ic.ac.uk/~ecr05/MSM_HOCR_v2/MSM_HOCR_v2-download.tgz | tar xz -C /tmp
-mv /tmp/homes/ecr05/MSM_HOCR_v2/Ubuntu /opt/HCP-Pipelines/MSMBinaries
-apt-get clean
-rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Install anaconda and needed python tools
+# Install anaconda2 and needed python tools
 cd /opt
 wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
 bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
 export PATH="/opt/Anaconda2/bin:${PATH}"
 /opt/Anaconda2/bin/pip install nibabel cifti pandas
-#is this necessary?
-#/opt/Anaconda2/bin/pip install certificates
 
 # Install the validator 0.26.11, along with pybids 0.6.0
 apt-get update
@@ -100,17 +87,11 @@ apt-get install -y nodejs
 npm install -g bids-validator@0.26.11
 /opt/Anaconda2/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
 
-
-# Copy needed files into container
-cp /generate_level1_fsf.sh /opt/HCP-Pipelines/Examples/Scripts/
-cp /RestfMRIAnalysis.sh /opt/HCP-Pipelines/TaskfMRIAnalysis/
-cp /RestfMRILevel1.sh /opt/HCP-Pipelines/TaskfMRIAnalysis/
-
-# Install Connectome Workbench dev version
+# Install Connectome Workbench version 1.3.2
 apt-get update
 cd /opt
-wget http://brainvis.wustl.edu/workbench/workbench-rh_linux64-dev_latest.zip
-unzip workbench-rh_linux64-dev_latest.zip
+wget http://brainvis.wustl.edu/workbench/workbench-rh_linux64-v1.3.2.zip
+unzip workbench-rh_linux64-v1.3.2.zip
 export PATH=/opt/workbench/bin_rh_linux64:${PATH}
 
 
@@ -120,7 +101,7 @@ apt-get update
 apt-get install -y --force-yes libstdc++6 nano
 
 # Make scripts executable
-chmod +x -R /run.py /rsfMRI_seed.py /opt/HCP-Pipelines
+chmod +x /run.py /rsfMRI_seed.py /generate_level1_fsf.sh /RestfMRIAnalysis.sh /RestfMRILevel1.sh /task-rest_level1.fsf
 
 %runscript
 
