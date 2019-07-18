@@ -37,7 +37,7 @@ def run_Generatefsf_level1_processing(**args):
         '--taskname="{fmriname}" ' + \
         '--temporalfilter="{highpass}" ' + \
         '--originalsmoothing="{fmrires}" ' + \
-        '--outdir="{path}" '
+        '--outdir="{outdir}" '
     cmd = cmd.format(**args)
     run(cmd, cwd=args["path"])
 
@@ -158,7 +158,7 @@ if ses_to_analyze:
                         parcel_file = "NONE"
                         parcel_name = "NONE"
                     task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
-                                                                                path=args.output_dir + "/sub-%s/ses-%" % (subject_label,ses_label),
+                                                                                outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label),
                                                                                 fmriname=fmriname,
                                                                                 highpass=highpass,
                                                                                 fmrires=fmrires)),
@@ -192,7 +192,7 @@ if ses_to_analyze:
                             parcel_file = "NONE"
                             parcel_name = "NONE"
                         task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
-                                                                path=args.output_dir + "/sub-%s/ses-%" % (subject_label,ses_label),
+                                                                path=args.output_dir + "/sub-%s/ses-%s" % (subject_label,ses_label),
                                                                 fmriname=fmriname,
                                                                 highpass=highpass,
                                                                 fmrires=fmrires)),
@@ -224,7 +224,7 @@ if ses_to_analyze:
                     parcel_file = "NONE"
                     parcel_name = "NONE"
                 task_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
-                                                                path=args.output_dir + "/sub-%s/ses-%" % (subject_label,ses_label),
+                                                                path=args.output_dir + "/sub-%s/ses-%s" % (subject_label,ses_label),
                                                                 fmriname=fmriname,
                                                                 highpass=highpass,
                                                                 fmrires=fmrires,)),

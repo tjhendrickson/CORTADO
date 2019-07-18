@@ -2,23 +2,47 @@
 #!/bin/bash
 set -e
 
+#~ND~FORMAT~MARKDOWN~
+#~ND~START~
+#
+# # RestfMRILevel2.sh
+#
+# ## Copyright (c) 2011-2019 The Human Connectome Project and The Connectome Coordination Facility
+#
+# ## Author(s)
+#
+# * Timothy Hendrickson, University of Minnesota Informatics Institute, Minneapolis, Minnesota
+# ## Product
+#
+# [Human Connectome Project][HCP] (HCP) Pipelines
+#
+# ## License
+#
+# See the [LICENSE](https://github.com/Washington-University/Pipelines/blob/master/LICENCE.md) file
+#
+# ## Description
+#
+# This script runs Level 2 Resting State Seed fMRI Analysis.
+#
+# <!-- References -->                                                                                                             
+# [HCP]: http://www.humanconnectome.org
+# [FSL]: http://fsl.fmrib.ox.ac.uk
+#
+#~ND~END~   
+
+
 ########################################## PREPARE FUNCTIONS ########################################## 
 
-source ${HCPPIPEDIR}/global/scripts/log.shlib # Logging related functions
-source ${HCPPIPEDIR}/global/scripts/fsl_version.shlib # Function for getting FSL version
+export PATH=/usr/local/fsl/bin:${PATH}
 
 show_tool_versions()
 {
-	# Show HCP pipelines version
-	log_Msg "TOOL_VERSIONS: Showing HCP Pipelines version"
-	cat ${HCPPIPEDIR}/version.txt
-
 	# Show wb_command version
-	log_Msg "TOOL_VERSIONS: Showing Connectome Workbench (wb_command) version"
+	echo "TOOL_VERSIONS: Showing Connectome Workbench (wb_command) version"
 	${CARET7DIR}/wb_command -version
 
-	# Show fsl version
-	fsl_version_get fsl_ver
+	echo "TOOL_VERSION: Showing FSL version"
+	cat /usr/local/fsl/etc/fslversion
 }
 
 
@@ -41,23 +65,22 @@ Parcellation="${13}"
 
 # Log how the script was launched
 g_script_name=`basename ${0}`
-log_SetToolName "${g_script_name}"
-log_Msg "READ_ARGS: ${g_script_name} arguments: $@"
+echo "READ_ARGS: ${g_script_name} arguments: $@"
 
 # Log variables parsed from command line arguments
-log_Msg "READ_ARGS: Subject: ${Subject}"
-log_Msg "READ_ARGS: ResultsFolder: ${ResultsFolder}"
-log_Msg "READ_ARGS: DownSampleFolder: ${DownSampleFolder}"
-log_Msg "READ_ARGS: LevelOnefMRINames: ${LevelOnefMRINames}"
-log_Msg "READ_ARGS: LevelOnefsfNames: ${LevelOnefsfNames}"
-log_Msg "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
-log_Msg "READ_ARGS: LevelTwofsfName: ${LevelTwofsfName}"
-log_Msg "READ_ARGS: LowResMesh: ${LowResMesh}"
-log_Msg "READ_ARGS: FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
-log_Msg "READ_ARGS: TemporalFilter: ${TemporalFilter}"
-log_Msg "READ_ARGS: VolumeBasedProcessing: ${VolumeBasedProcessing}"
-log_Msg "READ_ARGS: RegName: ${RegName}"
-log_Msg "READ_ARGS: Parcellation: ${Parcellation}"
+echo "READ_ARGS: Subject: ${Subject}"
+echo "READ_ARGS: ResultsFolder: ${ResultsFolder}"
+echo "READ_ARGS: DownSampleFolder: ${DownSampleFolder}"
+echo "READ_ARGS: LevelOnefMRINames: ${LevelOnefMRINames}"
+echo "READ_ARGS: LevelOnefsfNames: ${LevelOnefsfNames}"
+echo "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
+echo "READ_ARGS: LevelTwofsfName: ${LevelTwofsfName}"
+echo "READ_ARGS: LowResMesh: ${LowResMesh}"
+echo "READ_ARGS: FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
+echo "READ_ARGS: TemporalFilter: ${TemporalFilter}"
+echo "READ_ARGS: VolumeBasedProcessing: ${VolumeBasedProcessing}"
+echo "READ_ARGS: RegName: ${RegName}"
+echo "READ_ARGS: Parcellation: ${Parcellation}"
 
 # Log versions of tools used by this script
 show_tool_versions
@@ -78,7 +101,7 @@ if [ "${Parcellation}" != "NONE" ] ; then
 	ExtensionList="${ExtensionList}ptseries.nii "
 	ScalarExtensionList="${ScalarExtensionList}pscalar.nii "
 	Analyses="${Analyses}ParcellatedStats "; # space character at end to separate multiple analyses
-	log_Msg "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
+	echo "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
 fi
 
 # Determine whether to run Dense, and set strings used for filenaming
@@ -89,7 +112,7 @@ if [ "${Parcellation}" = "NONE" ]; then
 	ExtensionList="${ExtensionList}dtseries.nii "
 	ScalarExtensionList="${ScalarExtensionList}dscalar.nii "
 	Analyses="${Analyses}GrayordinatesStats "; # space character at end to separate multiple analyses
-	log_Msg "MAIN: DETERMINE_ANALYSES: Dense Analysis requested"
+	echo "MAIN: DETERMINE_ANALYSES: Dense Analysis requested"
 fi
 
 # Determine whether to run Volume, and set strings used for filenaming
@@ -98,13 +121,13 @@ if [ $VolumeBasedProcessing = "YES" ] ; then
 	ExtensionList="${ExtensionList}nii.gz "
 	ScalarExtensionList="${ScalarExtensionList}volume.dscalar.nii "
 	Analyses="${Analyses}StandardVolumeStats "; # space character at end to separate multiple analyses	
-	log_Msg "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
+	echo "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
 fi
 
-log_Msg "MAIN: DETERMINE_ANALYSES: Analyses: ${Analyses}"
-log_Msg "MAIN: DETERMINE_ANALYSES: ParcellationString: ${ParcellationString}"
-log_Msg "MAIN: DETERMINE_ANALYSES: ExtensionList: ${ExtensionList}"
-log_Msg "MAIN: DETERMINE_ANALYSES: ScalarExtensionList: ${ScalarExtensionList}"
+echo "MAIN: DETERMINE_ANALYSES: Analyses: ${Analyses}"
+echo "MAIN: DETERMINE_ANALYSES: ParcellationString: ${ParcellationString}"
+echo "MAIN: DETERMINE_ANALYSES: ExtensionList: ${ExtensionList}"
+echo "MAIN: DETERMINE_ANALYSES: ScalarExtensionList: ${ScalarExtensionList}"
 
 
 ##### SET VARIABLES REQUIRED FOR FILE NAMING #####
@@ -119,9 +142,9 @@ else
 fi
 SmoothingString="_s${FinalSmoothingFWHM}"
 TemporalFilterString="_hp""$TemporalFilter"
-log_Msg "MAIN: SET_NAME_STRINGS: SmoothingString: ${SmoothingString}"
-log_Msg "MAIN: SET_NAME_STRINGS: TemporalFilterString: ${TemporalFilterString}"
-log_Msg "MAIN: SET_NAME_STRINGS: RegString: ${RegString}"
+echo "MAIN: SET_NAME_STRINGS: SmoothingString: ${SmoothingString}"
+echo "MAIN: SET_NAME_STRINGS: TemporalFilterString: ${TemporalFilterString}"
+echo "MAIN: SET_NAME_STRINGS: RegString: ${RegString}"
 
 ### Figure out where the Level1 .feat directories are located
 # Change '@' delimited arguments to space-delimited lists for use in for loops
@@ -158,7 +181,7 @@ fi
 cat ${ResultsFolder}/${LevelTwofMRIName}/${LevelTwofsfName}_hp200_s4_level2.fsf | sed s/_hp200_s4/${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}/g > ${LevelTwoFEATDir}/design.fsf
 
 # Make additional design files required by flameo
-log_Msg "Make design files"
+echo "Make design files"
 cd ${LevelTwoFEATDir}; # Run feat_model inside LevelTwoFEATDir so relative paths work
 feat_model ${LevelTwoFEATDir}/design
 cd $OLDPWD; # Go back to previous directory using bash built-in $OLDPWD
@@ -167,23 +190,23 @@ cd $OLDPWD; # Go back to previous directory using bash built-in $OLDPWD
 ##### RUN flameo (FIXED-EFFECTS GLM ANALYSIS ON LEVEL2) #####
 
 ### Loop over Level 2 Analyses requested
-log_Msg "Loop over Level 2 Analyses requested: ${Analyses}"
+echo "Loop over Level 2 Analyses requested: ${Analyses}"
 analysisCounter=1;
 for Analysis in ${Analyses} ; do
-	log_Msg "Run Analysis: ${Analysis}"
+	echo "Run Analysis: ${Analysis}"
 	Extension=`echo $ExtensionList | cut -d' ' -f $analysisCounter`;
 	ScalarExtension=`echo $ScalarExtensionList | cut -d' ' -f $analysisCounter`;
 
 	### Exit if cope files are not present in Level 1 folders
 	fileCount=$( ls ${FirstFolder}/${Analysis}/cope1.${Extension} 2>/dev/null | wc -l );
 	if [ "$fileCount" -eq 0 ]; then
-		log_Msg "ERROR: Missing expected cope files in ${FirstFolder}/${Analysis}"
-		log_Msg "ERROR: Exiting $g_script_name"
+		echo "ERROR: Missing expected cope files in ${FirstFolder}/${Analysis}"
+		echo "ERROR: Exiting $g_script_name"
 		exit 1
 	fi
 
 	### Copy Level 1 stats folders into Level 2 analysis directory
-	log_Msg "Copy over Level 1 stats folders and convert CIFTI to NIFTI if required"
+	echo "Copy over Level 1 stats folders and convert CIFTI to NIFTI if required"
 	mkdir -p ${LevelTwoFEATDir}/${Analysis}
 	i=1
 	for LevelOneFEATDir in ${LevelOneFEATDirSTRING} ; do
@@ -194,7 +217,7 @@ for Analysis in ${Analyses} ; do
 
 	### convert CIFTI files to fakeNIFTI if required
 	if [ "${Analysis}" != "StandardVolumeStats" ] ; then
-		log_Msg "Convert CIFTI files to fakeNIFTI"
+		echo "Convert CIFTI files to fakeNIFTI"
 		fakeNIFTIused="YES"
 		for CIFTI in ${LevelTwoFEATDir}/${Analysis}/*/*.${Extension} ; do
 			fakeNIFTI=$( echo $CIFTI | sed -e "s|.${Extension}|.nii.gz|" );
@@ -206,7 +229,7 @@ for Analysis in ${Analyses} ; do
 	fi
 
 	### Create dof and Mask files for input to flameo (Level 2 analysis)
-	log_Msg "Create dof and Mask files for input to flameo (Level 2 analysis)"
+	echo "Create dof and Mask files for input to flameo (Level 2 analysis)"
 	MERGESTRING=""
 	i=1
 	while [ "$i" -le "${NumFirstLevelFolders}" ] ; do
@@ -219,10 +242,10 @@ for Analysis in ${Analyses} ; do
 	fslmaths ${LevelTwoFEATDir}/${Analysis}/dof.nii.gz -Tmin -bin ${LevelTwoFEATDir}/${Analysis}/mask.nii.gz
 
 	### Create merged cope and varcope files for input to flameo (Level 2 analysis)
-	log_Msg "Merge COPES and VARCOPES for ${NumContrasts} Contrasts"
+	echo "Merge COPES and VARCOPES for ${NumContrasts} Contrasts"
 	copeCounter=1
 	while [ "$copeCounter" -le "${NumContrasts}" ] ; do
-		log_Msg "Contrast Number: ${copeCounter}"
+		echo "Contrast Number: ${copeCounter}"
 		COPEMERGE=""
 		VARCOPEMERGE=""
 		i=1
@@ -237,20 +260,20 @@ for Analysis in ${Analyses} ; do
 	done
 
 	### Run 2nd level analysis using flameo
-	log_Msg "Run flameo (Level 2 analysis) for ${NumContrasts} Contrasts"
+	echo "Run flameo (Level 2 analysis) for ${NumContrasts} Contrasts"
 	copeCounter=1
 	while [ "$copeCounter" -le "${NumContrasts}" ] ; do
-		log_Msg "Contrast Number: ${copeCounter}"
-		log_Msg "$( which flameo )"
-		log_Msg "Command: flameo --cope=${Analysis}/cope${copeCounter}.nii.gz \\"
-		log_Msg "  --vc=${Analysis}/varcope${copeCounter}.nii.gz \\"
-		log_Msg "  --dvc=${Analysis}/dof.nii.gz \\"
-		log_Msg "  --mask=${Analysis}/mask.nii.gz \\"
-		log_Msg "  --ld=${Analysis}/cope${copeCounter}.feat \\"
-		log_Msg "  --dm=design.mat \\"
-		log_Msg "  --cs=design.grp \\"
-		log_Msg "  --tc=design.con \\"
-		log_Msg "  --runmode=fe"
+		echo "Contrast Number: ${copeCounter}"
+		echo "$( which flameo )"
+		echo "Command: flameo --cope=${Analysis}/cope${copeCounter}.nii.gz \\"
+		echo "  --vc=${Analysis}/varcope${copeCounter}.nii.gz \\"
+		echo "  --dvc=${Analysis}/dof.nii.gz \\"
+		echo "  --mask=${Analysis}/mask.nii.gz \\"
+		echo "  --ld=${Analysis}/cope${copeCounter}.feat \\"
+		echo "  --dm=design.mat \\"
+		echo "  --cs=design.grp \\"
+		echo "  --tc=design.con \\"
+		echo "  --runmode=fe"
 
 		cd ${LevelTwoFEATDir}; # run flameo within LevelTwoFEATDir so relative paths work
 		flameo --cope=${Analysis}/cope${copeCounter}.nii.gz \
@@ -263,13 +286,13 @@ for Analysis in ${Analyses} ; do
 			   --tc=design.con \
 			   --runmode=fe
 
-		log_Msg "Successfully completed flameo for Contrast Number: ${copeCounter}"
+		echo "Successfully completed flameo for Contrast Number: ${copeCounter}"
 		cd $OLDPWD; # Go back to previous directory using bash built-in $OLDPWD
 		copeCounter=$(($copeCounter+1))
 	done
 
 	### Cleanup Temporary Files (which were copied from Level1 stats directories)
-	log_Msg "Cleanup Temporary Files"
+	echo "Cleanup Temporary Files"
 	i=1
 	while [ "$i" -le "${NumFirstLevelFolders}" ] ; do
 		rm -r ${LevelTwoFEATDir}/${Analysis}/${i}
@@ -278,7 +301,7 @@ for Analysis in ${Analyses} ; do
 
 	### Convert fakeNIFTI Files back to CIFTI (if necessary)
 	if [ "$fakeNIFTIused" = "YES" ] ; then
-		log_Msg "Convert fakeNIFTI files back to CIFTI"
+		echo "Convert fakeNIFTI files back to CIFTI"
 		CIFTItemplate="${LevelOneFEATDir}/${Analysis}/pe1.${Extension}"
 
 		# convert flameo input files for review: ${LevelTwoFEATDir}/${Analysis}/*.nii.gz
@@ -291,7 +314,7 @@ for Analysis in ${Analyses} ; do
 	fi
 	
 	### Generate Files for Viewing
-	log_Msg "Generate Files for Viewing"
+	echo "Generate Files for Viewing"
 	# Initialize strings used for fslmerge command
 	zMergeSTRING=""
 	bMergeSTRING=""
@@ -350,4 +373,4 @@ for Analysis in ${Analyses} ; do
 done  # end loop: for Analysis in ${Analyses}
 
 
-log_Msg "Complete"
+echo "Complete"

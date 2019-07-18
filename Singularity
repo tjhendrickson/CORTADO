@@ -8,26 +8,15 @@ run.py /run.py
 modified_files/generate_level1_fsf.sh /generate_level1_fsf.sh
 modified_files/RestfMRIAnalysis.sh /RestfMRIAnalysis.sh
 modified_files/RestfMRILevel1.sh /RestfMRILevel1.sh
+modified_files/RestfMRILevel1.sh /RestfMRILevel2.sh
 modified_files/rsfMRI_seed.py /rsfMRI_seed.py
-modified_file/task-rest_level1.fsf /task-rest_level1.fsf
+modified_files/task-rest_level1.fsf /task-rest_level1.fsf
+modified_files/task-rest_level2.fsf /task-rest_level2.fsf
+
 
 %environment
 
 export CARET7DIR=/opt/workbench/bin_rh_linux64
-export HCPPIPEDIR=/opt/HCP-Pipelines
-export HCPPIPEDIR_Templates=/opt/HCP-Pipelines/global/templates
-export HCPPIPEDIR_Bin=/opt/HCP-Pipelines/global/binaries
-export HCPPIPEDIR_Config=/opt/HCP-Pipelines/global/config
-export HCPPIPEDIR_PreFS=/opt/HCP-Pipelines/PreFreeSurfer/scripts
-export HCPPIPEDIR_FS=/opt/HCP-Pipelines/FreeSurfer/scripts
-export HCPPIPEDIR_PostFS=/opt/HCP-Pipelines/PostFreeSurfer/scripts
-export HCPPIPEDIR_fMRISurf=/opt/HCP-Pipelines/fMRISurface/scripts
-export HCPPIPEDIR_fMRIVol=/opt/HCP-Pipelines/fMRIVolume/scripts
-export HCPPIPEDIR_tfMRI=/opt/HCP-Pipelines/tfMRI/scripts
-export HCPPIPEDIR_dMRI=/opt/HCP-Pipelines/DiffusionPreprocessing/scripts
-export HCPPIPEDIR_dMRITract=/opt/HCP-Pipelines/DiffusionTractography/scripts
-export HCPPIPEDIR_Global=/opt/HCP-Pipelines/global/scripts
-export HCPPIPEDIR_tfMRIAnalysis=/opt/HCP-Pipelines/TaskfMRIAnalysis/scripts
 export OS=Linux
 export FS_OVERRIDE=0
 export FIX_VERTEX_AREA=

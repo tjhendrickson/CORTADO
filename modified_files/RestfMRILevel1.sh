@@ -1,11 +1,40 @@
 #!/bin/bash
+#~ND~FORMAT~MARKDOWN~
+#~ND~START~
+#
+# # RestfMRILevel1.sh
+#
+# ## Copyright (c) 2011-2019 The Human Connectome Project and The Connectome Coordination Facility
+#
+# ## Author(s)
+#
+# * Timothy Hendrickson, University of Minnesota Informatics Institute, Minneapolis, Minnesota
+# ## Product
+#
+# [Human Connectome Project][HCP] (HCP) Pipelines
+#
+# ## License
+#
+# See the [LICENSE](https://github.com/Washington-University/Pipelines/blob/master/LICENCE.md) file
+#
+# ## Description
+#
+# This script runs Level 1 Resting State Seed fMRI Analysis.
+#
+# <!-- References -->                                                                                                             
+# [HCP]: http://www.humanconnectome.org
+# [FSL]: http://fsl.fmrib.ox.ac.uk
+#
+#~ND~END~   
+
+
 set -e
 set -x
 
-# Must first source SetUpHCPPipeline.sh to set up pipeline environment variables and software
+
 # Requirements for this script
-#  installed versions of FSL 5.0.7 or greater
-#  environment: FSLDIR , HCPPIPEDIR , CARET7DIR 
+#  installed versions of FSL 6.0.1
+#  environment: FSLDIR, CARET7DIR 
 
 
 ########################################## PREPARE FUNCTIONS ########################################## 
@@ -139,24 +168,24 @@ else
 	mkdir -p ${FEATDir}
 fi
 
-	taskfile_base=`basename $taskfile`
+taskfile_base=`basename $taskfile`
 
-	# get the number of time points in the image file
-	FMRI_NPTS=`fslinfo ${taskfile} | grep -w 'dim4' | awk '{print $2}'`
+# get the number of time points in the image file
+FMRI_NPTS=`fslinfo ${taskfile} | grep -w 'dim4' | awk '{print $2}'`
 
-	# now the TR in the image file
-	FMRI_TR=`fslinfo ${taskfile} | grep -w 'pixdim4' | awk '{print $2}'`
+# now the TR in the image file
+FMRI_TR=`fslinfo ${taskfile} | grep -w 'pixdim4' | awk '{print $2}'`
 
-	# now number of voxels in image file
-	FMRI_VOXS=`fslstats ${taskfile} -v | awk '{print $1} '`
+# now number of voxels in image file
+FMRI_VOXS=`fslstats ${taskfile} -v | awk '{print $1} '`
 
-	# modify the destination by putting in the correct number of time points
-	sed -i "s/NTPS/${FMRI_NPTS}/" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:TRS:${FMRI_TR}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:TOTVOXELS:${FMRI_VOXS}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:HPASS:${temporalfilter}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:FEATFILE:${taskfile_base}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:REGRESSOR:${regressor_file}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+# modify the destination by putting in the correct number of time points
+sed -i "s/NTPS/${FMRI_NPTS}/" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+sed -i "s:TRS:${FMRI_TR}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+sed -i "s:TOTVOXELS:${FMRI_VOXS}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+sed -i "s:HPASS:${temporalfilter}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+sed -i "s:FEATFILE:${taskfile_base}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+sed -i "s:REGRESSOR:${regressor_file}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 
 
 ### Edit fsf file to record the parameters used in this analysis
