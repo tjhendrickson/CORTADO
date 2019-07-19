@@ -51,20 +51,23 @@ while [ ${index} -lt ${numArgs} ]; do
 			usage
 			exit 1
 			;;
-		--indir=*)
-			indir=${argument#*=}
-			index=$(( index + 1 ))
-			;;
 		--outdir=*)
 			outdir=${argument#*=}
 			index=$(( index + 1 ))
 			;;
-		--lvl1tasks=*)
-			LevelOnefMRINames=${argument#*=}
+		--pipeline=*)
+			Pipeline=${argument#*=}
+			index=$(( index + 1 ))
+		--finalfile=*)
+			FinalFile=${argument#*=}
 			index=$(( index + 1 ))
 			;;
-		--lvl1fsfs=*)
-			LevelOnefsfNames=${argument#*=}
+		--fmrifilename=*)
+			fMRIFilename=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--fmrifoldername=*)
+			fMRIFolderName=${argument#*=}
 			index=$(( index + 1 ))
 			;;		
 		--lvl2task=*)
@@ -132,11 +135,10 @@ done
 
 # Write command-line arguments to log file
 echo "READ_ARGS: outdir: ${outdir}"
-echo "READ_ARGS: indir: ${indir}"
-echo "READ_ARGS: LevelOnefMRINames: ${LevelOnefMRINames}"
-echo "READ_ARGS: LevelOnefsfNames: ${LevelOnefsfNames}"
-echo "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
-echo "READ_ARGS: LevelTwofsfName: ${LevelTwofsfName}"
+echo "READ_ARGS: Pipeline: ${Pipeline}"
+echo "READ_ARGS: File Derivative to Use for Analysis: ${FinalFile}"
+echo "READ_ARGS: fMRIFilename: ${fMRIFilename}"
+echo "READ_ARGS: fMRIFolderName: ${fMRIFolderName}"
 echo "READ_ARGS: LowResMesh: ${LowResMesh}"
 echo "READ_ARGS: GrayordinatesResolution: ${GrayordinatesResolution}"
 echo "READ_ARGS: OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
@@ -151,10 +153,9 @@ echo "READ_ARGS: seedROI: ${seedROI}"
 ########################################## MAIN #########################################
 
 # Determine locations of necessary directories (using expected naming convention)
-AtlasFolder="${indir}/${Subject}/MNINonLinear"
+DownSampleFolder="${AtlasFolder}/fsaverage_LR${LowResMesh}k"
 ResultsFolder="${AtlasFolder}/Results"
 ROIsFolder="${AtlasFolder}/ROIs"
-DownSampleFolder="${AtlasFolder}/fsaverage_LR${LowResMesh}k"
 
 
 # Run Level 1 analyses for each phase encoding direction (from command line arguments)
@@ -165,27 +166,55 @@ for LevelOnefMRIName in $( echo $LevelOnefMRINames | sed 's/@/ /g' ) ; do
 	echo "MAIN: RUN_LEVEL1: LevelOnefMRIName: ${LevelOnefMRIName}"	
 	# Get corresponding fsf name from $LevelOnefsfNames list
 	LevelOnefsfName=`echo $LevelOnefsfNames | cut -d "@" -f $i`
-	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh $Subject $ResultsFolder $ROIsFolder $DownSampleFolder $LevelOnefMRIName $LevelOnefsfName $LowResMesh $GrayordinatesResolution $OriginalSmoothingFWHM $Confound $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation $ParcellationFile $seedROI"
+	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh $outdir $Pipeline $FinalFile $fmriFilename $fMRIFolderName $ResultsFolder $ROIsFolder $DownSampleFolder $LowResMesh $GrayordinatesResolution $OriginalSmoothingFWHM $Confound $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation $ParcellationFile $seedROI"
 	/RestfMRILevel1.sh \
+		$outdir \
+		$Pipeline \
+		$FinalFile \
+		$fmriFilename \
+		$fMRIFolderName \
+		$ResultsFolder \
+		$ROIsFolder \
+		$DownSampleFolder \
+		$LowResMesh \
+		$GrayordinatesResolution \
+		$OriginalSmoothingFWHM \
+		$Confound \
+		$FinalSmoothingFWHM \
+		$TemporalFilter \
+		$VolumeBasedProcessing \
+		$RegName \
+		$Parcellation \
+		$ParcellationFile \
+		$seedROI
+	i=$(($i+1))
+done
+
+# Run Level 2 analyses by combining phase encoding directions for the same resting state ScalarExtensionList
+if [ "$LevelTwofMRIName" != "NONE" ]
+then
+	# Combine Data Across Phase Encoding Directions in the Level 2 Analysis
+	echo "MAIN: RUN_LEVEL2: Combine Data Across Phase Encoding Directions in the Level 2 Analysis"
+	echo "MAIN: RUN_LEVEL2: Issuing command: /RestfMRILevel2.sh $Subject $ResultsFolder $DownSampleFolder $LevelOnefMRINames $LevelOnefsfNames $LevelTwofMRIName $LevelTwofsfNames $LowResMesh $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation"
+	/RestfMRILevel2.sh \
 	  $Subject \
 	  $ResultsFolder \
-	  $ROIsFolder \
+	  $outdir \
 	  $DownSampleFolder \
-	  $LevelOnefMRIName \
-	  $LevelOnefsfName \
+	  $LevelOnefMRINames \
+	  $LevelOnefsfNames \
+	  $LevelTwofMRIName \
+	  $LevelTwofsfNames \
 	  $LowResMesh \
-	  $GrayordinatesResolution \
-	  $OriginalSmoothingFWHM \
-	  $Confound \
 	  $FinalSmoothingFWHM \
 	  $TemporalFilter \
 	  $VolumeBasedProcessing \
 	  $RegName \
 	  $Parcellation \
-	  $ParcellationFile \
-	  $seedROI
-	i=$(($i+1))
-done
+	  $ParcellationFile \ 
+	  $seedROI \
+	  $Pipeline 
+fi
 
 echo "MAIN: Completed"
 

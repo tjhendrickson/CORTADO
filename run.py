@@ -45,10 +45,12 @@ def run_seed_FirstLevel_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
     cmd = '{HCPPIPEDIR}/TaskfMRIAnalysis/RestfMRIAnalysis.sh ' + \
-        '--path="{path}" ' + \
-        '--subject="{subject}" ' + \
-        '--lvl1tasks="{fmriname}" ' + \
-        '--lvl1fsfs="{shortfmriname}" ' + \
+        '--pipeline="{pipeline}" ' + \
+        '--outdir="{outdir}" ' + \
+        '--AtlasFolder="{AtlasFolder}" '  + \
+        '--finalfile="{finalfile} ' + \
+        '--fmrifilename="{fmrifilename}" ' + \
+        '--fmrifoldername="{fmrifoldername}" ' + \
         '--lvl2task="{level_2_task}" ' + \
         '--lvl2fsf="{level_2_fsf}" ' + \
         '--lowresmesh="{lowresmesh:d}" ' + \
@@ -92,8 +94,6 @@ parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do y
                                         choices=['together', 'separate'],
                                         default='separate')
 parser.add_argument('--seed_analysis_output',help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',choices = ['dense','parcellated'], default = 'dense')
-
-
 args = parser.parse_args()
 
 # global variables
@@ -141,11 +141,17 @@ if ses_to_analyze:
             else:
                 bolds = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='bold',task='rest') if 'preproc' in f.filename]
         for fmritcs in bolds:
-            zooms = nibabel.load(fmritcs).get_header().get_zooms()
-            reptime = float("%.1f" % zooms[3])
-            fmrires = str(int(min(zooms[:3])))
-            fmriname = fmritcs.path.basename.split(".")[0]
-            assert fmriname
+            if args.preprocessing_type == 'HCP':
+                zooms = nibabel.load(fmritcs).get_header().get_zooms()
+                reptime = float("%.1f" % zooms[3])
+                fmrires = str(int(min(zooms[:3])))
+                shortfmriname=fmritcs.split("/")[-2]
+                AtlasFolder='/'.join(fmritcs.split("/")[0:5])
+                fmriname = os.path.basename(fmritcs).split(".")[0]
+                assert fmriname
+
+            elif args.preprocessing_type == 'fmriprep':
+                pass
             if len(seed_ROI_name) > 1:
                 if seed_handling == "together":
                     separator = "-"
@@ -163,13 +169,15 @@ if ses_to_analyze:
                                                                                 highpass=highpass,
                                                                                 fmrires=fmrires)),
                                                     ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                                    path=args.output_dir + "/sub-%s" % (subject_label),
-                                                                                    subject="ses-%s" % (ses_label),
+                                                                                    pipeline=args.preprocessing_type,
+                                                                                    outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label),
                                                                                     lowresmesh=lowresmesh,
-                                                                                    shortfmriname=shortfmriname,
+                                                                                    finalfile=fmritcs,
+                                                                                    fmrifoldername=shortfmriname,
+                                                                                    AtlasFolder=AtlasFolder,
+                                                                                    fmrifilename=fmriname,
                                                                                     fmrires=fmrires,
                                                                                     smoothing=smoothing,
-                                                                                    fmriname=fmriname,
                                                                                     parcel_file=parcel_file,
                                                                                     parcel_name=parcel_name,
                                                                                     temporal_filter=highpass,

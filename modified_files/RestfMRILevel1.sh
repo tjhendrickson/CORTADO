@@ -55,42 +55,119 @@ show_tool_versions()
 
 ########################################## READ_ARGS ##################################
 
-# Set variables from positional arguments to command line
-Subject="$1"
-ResultsFolder="$2"
-ROIsFolder="$3"
-DownSampleFolder="$4"
-LevelOnefMRIName="$5"
-LevelOnefsfName="$6"
-LowResMesh="$7"
-GrayordinatesResolution="$8"
-OriginalSmoothingFWHM="$9"
-Confound="${10}"
-FinalSmoothingFWHM="${11}"
-TemporalFilter="${12}"
-VolumeBasedProcessing="${13}"
-RegName="${14}"
-Parcellation="${15}"
-ParcellationFile="${16}"
-seedROI="${17}"
+# Parse expected arguments from command-line array
+echo "READ_ARGS: Parsing Command Line Options"
+local index=0
+local numArgs=${#arguments[@]}
+local argument
 
-# Explicitly set tool name for logging
-g_script_name=`basename ${0}`
-echo "Script name: ${g_script_name}"
-echo "DownSampleFolder: ${DownSampleFolder}"
-echo "LevelOnefMRIName: ${LevelOnefMRIName}"
-echo "LevelOnefsfName: ${LevelOnefsfName}"
-echo "LowResMesh: ${LowResMesh}"
-echo "GrayordinatesResolution: ${GrayordinatesResolution}"
-echo "OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
-echo "Confound: ${Confound}"
-echo "FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
-echo "TemporalFilter: ${TemporalFilter}"
-echo "VolumeBasedProcessing: ${VolumeBasedProcessing}"
-echo "RegName: ${RegName}"
-echo "Parcellation: ${Parcellation}"
-echo "ParcellationFile: ${ParcellationFile}"
-echo "seedROI: ${seedROI}" 
+while [ ${index} -lt ${numArgs} ]; do
+	argument=${arguments[index]}
+
+	case ${argument} in
+		--help)
+			usage
+			exit 1
+			;;
+		--outdir=*)
+			outdir=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--pipeline=*)
+			Pipeline=${argument#*=}
+			index=$(( index + 1 ))
+		--finalfile=*)
+			FinalFile=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--fmrifilename=*)
+			fMRIFilename=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--fmrifoldername=*)
+			fMRIFolderName=${argument#*=}
+			index=$(( index + 1 ))
+			;;		
+		--lvl2task=*)
+			LevelTwofMRIName=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--lvl2fsf=*)
+			LevelTwofsfNames=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--lowresmesh=*)
+			LowResMesh=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--grayordinatesres=*)
+			GrayordinatesResolution=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--origsmoothingFWHM=*)
+			OriginalSmoothingFWHM=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--confound=*)
+			Confound=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--finalsmoothingFWHM=*)
+			FinalSmoothingFWHM=${argument#*=}
+			index=$(( index + 1 ))
+			;;		
+		--temporalfilter=*)
+			TemporalFilter=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--vba=*)
+			VolumeBasedProcessing=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--regname=*)
+			RegName=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--parcellation=*)
+			Parcellation=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--parcellationfile=*)
+			ParcellationFile=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--seedROI=*)
+			seedROI=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		*)
+			usage
+			echo ""
+			echo "ERROR: Unrecognized Option: ${argument}"
+			echo ""
+			exit 1
+			;;
+	esac
+done
+
+
+# Write command-line arguments to log file
+echo "READ_ARGS: outdir: ${outdir}"
+echo "READ_ARGS: Pipeline: ${Pipeline}"
+echo "READ_ARGS: File Derivative to Use for Analysis: ${FinalFile}"
+echo "READ_ARGS: fMRIFilename: ${fMRIFilename}"
+echo "READ_ARGS: fMRIFolderName: ${fMRIFolderName}"
+echo "READ_ARGS: LowResMesh: ${LowResMesh}"
+echo "READ_ARGS: GrayordinatesResolution: ${GrayordinatesResolution}"
+echo "READ_ARGS: OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
+echo "READ_ARGS: Confound: ${Confound}"
+echo "READ_ARGS: FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
+echo "READ_ARGS: TemporalFilter: ${TemporalFilter}"
+echo "READ_ARGS: VolumeBasedProcessing: ${VolumeBasedProcessing}"
+echo "READ_ARGS: RegName: ${RegName}"
+echo "READ_ARGS: Parcellation: ${Parcellation}"
+echo "READ_ARGS: ParcellationFile: ${ParcellationFile}"
+echo "READ_ARGS: seedROI: ${seedROI}"
 
 show_tool_versions
 
@@ -125,6 +202,15 @@ if [ "$VolumeBasedProcessing" = "YES" ] ; then
 	echo "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
 fi
 
+# What Pipeline outputs are we using? HCP or fmriprep?
+if [ "${Pipeline}" = "HCP" ]; then
+	# use HCP outputs
+	file_suffix='.dtseries.nii'
+elif [ "${Pipeline}" = "fmriprep" ]; then
+	# use fmriprep outputs
+	file_suffix='.nii.gz'
+fi
+
 
 ##### SET_NAME_STRINGS: smoothing and filtering string variables used for file naming #####
 OriginalSmoothString="_s${OriginalSmoothingFWHM}"
@@ -148,18 +234,18 @@ echo "MAIN: SET_NAME_STRINGS: Extension: ${Extension}"
 ##### IMAGE_INFO: DETERMINE TR AND SCAN LENGTH #####
 # Caution: Reading information for Parcellated and Volume analyses from original CIFTI file
 # Extract TR information from input time series files
-TR_vol=`${CARET7DIR}/wb_command -file-information ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}_clean.dtseries.nii -no-map-info -only-step-interval`
+TR_vol=`${CARET7DIR}/wb_command -file-information ${FinalFile} -no-map-info -only-step-interval`
 echo "MAIN: IMAGE_INFO: TR_vol: ${TR_vol}"
 
 # Extract number of time points in CIFTI time series file
-npts=`${CARET7DIR}/wb_command -file-information ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}_clean.dtseries.nii -no-map-info -only-number-of-maps`
+npts=`${CARET7DIR}/wb_command -file-information ${FinalFile} -no-map-info -only-number-of-maps`
 echo "MAIN: IMAGE_INFO: npts: ${npts}"
 
 
 ##### MAKE_DESIGNS: MAKE DESIGN FILES #####
 
 # Create output .feat directory ($FEATDir) for this analysis
-FEATDir="${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefsfName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1_${seedROI}_ROI.feat"
+FEATDir="${outdir}/${LevelOnefsfName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1_${seedROI}_ROI.feat"
 echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
 if [ -e ${FEATDir} ] ; then
 	rm -r ${FEATDir}
@@ -179,43 +265,14 @@ FMRI_TR=`fslinfo ${taskfile} | grep -w 'pixdim4' | awk '{print $2}'`
 # now number of voxels in image file
 FMRI_VOXS=`fslstats ${taskfile} -v | awk '{print $1} '`
 
-# modify the destination by putting in the correct number of time points
+# modify the fsf file with sed to place in pertinent fMRI file information
 sed -i "s/NTPS/${FMRI_NPTS}/" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:TRS:${FMRI_TR}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:TOTVOXELS:${FMRI_VOXS}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:HPASS:${temporalfilter}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:FEATFILE:${taskfile_base}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:REGRESSOR:${regressor_file}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-
-
-### Edit fsf file to record the parameters used in this analysis
-# Copy template fsf file into $FEATDir
-echo "MAIN: MAKE_DESIGNS: Copying fsf file to .feat directory"
-cp ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefsfName}${TemporalFilterString}${OriginalSmoothString}_level1.fsf ${FEATDir}/design.fsf
-
-# Change the highpass filter string to the desired highpass filter
-echo "MAIN: MAKE_DESIGNS: Change design.fsf: Set highpass filter string to the desired highpass filter to ${TemporalFilter}"
-sed -i -e "s|set fmri(paradigm_hp) \"200\"|set fmri(paradigm_hp) \"${TemporalFilter}\"|g" ${FEATDir}/design.fsf
-
-# Change smoothing to be equal to additional smoothing in FSF file
-echo "MAIN: MAKE_DESIGNS: Change design.fsf: Set smoothing to be equal to final smoothing to ${FinalSmoothingFWHM}"
-sed -i -e "s|set fmri(smooth) \"2\"|set fmri(smooth) \"${FinalSmoothingFWHM}\"|g" ${FEATDir}/design.fsf
-
-# Change output directory name to match total smoothing and highpass
-echo "MAIN: MAKE_DESIGNS: Change design.fsf: Change string in output directory name to ${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1"
-sed -i -e "s|_hp2000_s2|${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1|g" ${FEATDir}/design.fsf
-
-# find current value for npts in template.fsf
-fsfnpts=`grep "set fmri(npts)" ${FEATDir}/design.fsf | cut -d " " -f 3 | sed 's|"||g'`;
-
-# Ensure number of time points in fsf matches time series image
-if [ "$fsfnpts" -eq "$npts" ] ; then
-	echo "MAIN: MAKE_DESIGNS: Change design.fsf: Scan length matches number of timepoints in template.fsf: ${fsfnpts}"
-else
-	echo "MAIN: MAKE_DESIGNS: Change design.fsf: Warning! Scan length does not match template.fsf!"
-	echo "MAIN: MAKE_DESIGNS: Change design.fsf: Warning! Changing Number of Timepoints in fsf (""${fsfnpts}"") to match time series image (""${npts}"")"
-	sed -i -e  "s|set fmri(npts) \"\?${fsfnpts}\"\?|set fmri(npts) ${npts}|g" ${FEATDir}/design.fsf
-fi
+sed -i "s:SMOOTH:${FinalSmoothingFWHM}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 
 
 ### Use fsf to create additional design files used by film_gls
@@ -254,7 +311,7 @@ if $runParcellated; then
 	echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Parcellating data"
 	echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Notice: currently parcellated time series has $FinalSmoothingString in file name, but no additional smoothing was applied!"
 	# FinalSmoothingString in parcellated filename allows subsequent commands to work for either dtseries or ptseries
-	${CARET7DIR}/wb_command -cifti-parcellate ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}_clean.dtseries.nii ${ParcellationFile} COLUMN ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_clean.ptseries.nii
+	${CARET7DIR}/wb_command -cifti-parcellate ${FinalFile} ${ParcellationFile} COLUMN ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_clean.ptseries.nii
 fi
 
 ### Apply spatial smoothing to CIFTI dense analysis
@@ -268,7 +325,7 @@ if $runDense ; then
 		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: AdditionalSmoothingFWHM: ${AdditionalSmoothingFWHM}"
 		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: AdditionalSigma: ${AdditionalSigma}"
 		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: Applying additional surface smoothing to CIFTI Dense data"
-		${CARET7DIR}/wb_command -cifti-smoothing ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}_clean.dtseries.nii ${AdditionalSigma} ${AdditionalSigma} COLUMN ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.dtseries.nii -left-surface ${DownSampleFolder}/${Subject}.L.midthickness.${LowResMesh}k_fs_LR.surf.gii -right-surface ${DownSampleFolder}/${Subject}.R.midthickness.${LowResMesh}k_fs_LR.surf.gii
+		${CARET7DIR}/wb_command -cifti-smoothing ${FinalFile} ${AdditionalSigma} ${AdditionalSigma} COLUMN ${outdir}/${fmriname}${file_suffix} -left-surface ${DownSampleFolder}/${Subject}.L.midthickness.${LowResMesh}k_fs_LR.surf.gii -right-surface ${DownSampleFolder}/${Subject}.R.midthickness.${LowResMesh}k_fs_LR.surf.gii
 	else
 		if [ "$FinalSmoothingFWHM" -eq "$OriginalSmoothingFWHM" ]; then
 			echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: No additional surface smoothing requested for CIFTI Dense data"
@@ -276,7 +333,7 @@ if $runDense ; then
 			echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: WARNING: For CIFTI Dense data, the surface smoothing requested \($FinalSmoothingFWHM\) is LESS than the surface smoothing already applied \(${OriginalSmoothingFWHM}\)."
 			echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: Continuing analysis with ${OriginalSmoothingFWHM} of total surface smoothing."
 		fi
-		cp ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}_clean.dtseries.nii ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.dtseries.nii
+		cp ${FinalFile} ${outdir}/${fmriname}${file_suffix}
 	fi
 fi
 
@@ -360,7 +417,7 @@ if $runDense ; then
 	echo "MAIN: RUN_GLM: Dense Grayordinates Analysis"
 	#Split into surface and volume
 	echo "MAIN: RUN_GLM: Split into surface and volume"
-	${CARET7DIR}/wb_command -cifti-separate-all ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.dtseries.nii -volume ${FEATDir}/${LevelOnefMRIName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.nii.gz -left ${FEATDir}/${LevelOnefMRIName}${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.atlasroi.L.${LowResMesh}k_fs_LR.func.gii -right ${FEATDir}/${LevelOnefMRIName}${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.atlasroi.R.${LowResMesh}k_fs_LR.func.gii
+	${CARET7DIR}/wb_command -cifti-separate-all ${outdir}/${fmriname}${file_suffix} -volume ${FEATDir}/${LevelOnefMRIName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.nii.gz -left ${FEATDir}/${LevelOnefMRIName}${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.atlasroi.L.${LowResMesh}k_fs_LR.func.gii -right ${FEATDir}/${LevelOnefMRIName}${RegString}${TemporalFilterString}${FinalSmoothingString}_clean.atlasroi.R.${LowResMesh}k_fs_LR.func.gii
 
 	#Run film_gls on subcortical volume data
 	echo "MAIN: RUN_GLM: Run film_gls on subcortical volume data"

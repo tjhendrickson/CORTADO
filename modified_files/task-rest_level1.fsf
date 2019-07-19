@@ -67,7 +67,7 @@ set fmri(noisear) 0.34
 set fmri(signallossthresh) 10
 
 # Spatial smoothing FWHM (mm)
-set fmri(smooth) 2
+set fmri(smooth) SMOOTH
 
 # Carry out main stats?
 set fmri(stats_yn) 1
