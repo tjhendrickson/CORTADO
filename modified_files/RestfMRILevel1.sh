@@ -76,6 +76,11 @@ while [ ${index} -lt ${numArgs} ]; do
 		--pipeline=*)
 			Pipeline=${argument#*=}
 			index=$(( index + 1 ))
+			;;
+		--ICAoutputs=*)
+			ICAString=${argument#*=}
+			index=$(( index + 1 ))
+			;;
 		--finalfile=*)
 			FinalFile=${argument#*=}
 			index=$(( index + 1 ))
@@ -87,13 +92,17 @@ while [ ${index} -lt ${numArgs} ]; do
 		--fmrifoldername=*)
 			fMRIFolderName=${argument#*=}
 			index=$(( index + 1 ))
-			;;		
-		--lvl2task=*)
-			LevelTwofMRIName=${argument#*=}
+			;;
+		--ResultsFolder=*)
+			ResultsFolder=${argument#*=}
 			index=$(( index + 1 ))
 			;;
-		--lvl2fsf=*)
-			LevelTwofsfNames=${argument#*=}
+		--ROIsFolder=*)
+			ROIsFolder=${argument#*=}
+			index=$(( index + 1 ))
+			;;
+		--DownSampleFolder=*)
+			DownSampleFolder=${argument#*=}
 			index=$(( index + 1 ))
 			;;
 		--lowresmesh=*)
@@ -154,9 +163,13 @@ done
 # Write command-line arguments to log file
 echo "READ_ARGS: outdir: ${outdir}"
 echo "READ_ARGS: Pipeline: ${Pipeline}"
+echo "READ_ARGS: Use ICAoutputs: ${ICAoutputs}"
 echo "READ_ARGS: File Derivative to Use for Analysis: ${FinalFile}"
 echo "READ_ARGS: fMRIFilename: ${fMRIFilename}"
 echo "READ_ARGS: fMRIFolderName: ${fMRIFolderName}"
+echo "READ_ARGS: ResultsFolder: ${ResultsFolder}"
+echo "READ_ARGS: ROIsFolder: ${ROIsFolder}"
+echo "READ_ARGS: DownSampleFolder: ${DownSampleFolder}"
 echo "READ_ARGS: LowResMesh: ${LowResMesh}"
 echo "READ_ARGS: GrayordinatesResolution: ${GrayordinatesResolution}"
 echo "READ_ARGS: OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
@@ -183,16 +196,34 @@ if [ "${Parcellation}" != "NONE" ] ; then
 	# Run Parcellated Analyses
 	runParcellated=true;
 	ParcellationString="_${Parcellation}"
-	Extension="ptseries.nii"
+	if [ "${Pipeline}" = "HCP" ]; then
+		Extension=".ptseries.nii"
+	elif [ "${Pipeline}" = "fmriprep" ]; 
+		Extension="_parcellated.nii.gz"
+	fi
 	echo "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
 fi
+
+# determine whether to use ICA denoised outputs or not
+if [ "${ICAoutputs}" = 'YES' ]; then
+	if [ "${Pipeline}" = "HCP" ]; then
+		ICAString="_clean"
+	else
+		ICAString=""
+else
+	ICAString=""
+fi
+
 
 # Determine whether to run Dense, and set strings used for filenaming
 if [ "${Parcellation}" = "NONE" ]; then
 	# Run Dense Analyses
 	runDense=true;
 	ParcellationString=""
-	Extension="dtseries.nii"
+	if [ "${Pipeline}" = "HCP" ]; then
+		Extension=".dtseries.nii"
+	elif [ "${Pipeline}" = "fmriprep" ]; 
+		Extension="_dense.nii.gz"
 	echo "MAIN: DETERMINE_ANALYSES: Dense Analysis requested"
 fi
 
@@ -200,15 +231,6 @@ fi
 if [ "$VolumeBasedProcessing" = "YES" ] ; then
 	runVolume=true;
 	echo "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
-fi
-
-# What Pipeline outputs are we using? HCP or fmriprep?
-if [ "${Pipeline}" = "HCP" ]; then
-	# use HCP outputs
-	file_suffix='.dtseries.nii'
-elif [ "${Pipeline}" = "fmriprep" ]; then
-	# use fmriprep outputs
-	file_suffix='.nii.gz'
 fi
 
 
@@ -245,8 +267,9 @@ echo "MAIN: IMAGE_INFO: npts: ${npts}"
 ##### MAKE_DESIGNS: MAKE DESIGN FILES #####
 
 # Create output .feat directory ($FEATDir) for this analysis
-FEATDir="${outdir}/${LevelOnefsfName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1_${seedROI}_ROI.feat"
+FEATDir="${outdir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1_${seedROI}_ROI.feat"
 echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
+
 if [ -e ${FEATDir} ] ; then
 	rm -r ${FEATDir}
 	mkdir ${FEATDir}
@@ -254,33 +277,30 @@ else
 	mkdir -p ${FEATDir}
 fi
 
-taskfile_base=`basename $taskfile`
-
 # get the number of time points in the image file
-FMRI_NPTS=`fslinfo ${taskfile} | grep -w 'dim4' | awk '{print $2}'`
+FMRI_NPTS=`fslinfo ${FinalFile} | grep -w 'dim4' | awk '{print $2}'`
 
 # now the TR in the image file
-FMRI_TR=`fslinfo ${taskfile} | grep -w 'pixdim4' | awk '{print $2}'`
+FMRI_TR=`fslinfo ${FinalFile} | grep -w 'pixdim4' | awk '{print $2}'`
 
 # now number of voxels in image file
-FMRI_VOXS=`fslstats ${taskfile} -v | awk '{print $1} '`
+FMRI_VOXS=`fslstats ${FinalFile} -v | awk '{print $1} '`
 
 # modify the fsf file with sed to place in pertinent fMRI file information
 sed -i "s/NTPS/${FMRI_NPTS}/" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:TRS:${FMRI_TR}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:TOTVOXELS:${FMRI_VOXS}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:HPASS:${temporalfilter}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-sed -i "s:FEATFILE:${taskfile_base}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+sed -i "s:FEATFILE:${FinalFile}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:REGRESSOR:${regressor_file}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
 sed -i "s:SMOOTH:${FinalSmoothingFWHM}:g" ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
-
 
 ### Use fsf to create additional design files used by film_gls
 echo "MAIN: MAKE_DESIGNS: Create design files, model confounds if desired"
 # Determine if there is a confound matrix text file (e.g., output of fsl_motion_outliers)
 confound_matrix="";
 if [ "$Confound" != "NONE" ] ; then
-	confound_matrix=$( ls -d ${ResultsFolder}/${LevelOnefMRIName}/${Confound} 2>/dev/null )
+	confound_matrix=$( ls -d ${ResultsFolder}/${fMRIFolderName}/${Confound} 2>/dev/null )
 fi
 
 # Run feat_model inside $FEATDir
@@ -311,7 +331,11 @@ if $runParcellated; then
 	echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Parcellating data"
 	echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Notice: currently parcellated time series has $FinalSmoothingString in file name, but no additional smoothing was applied!"
 	# FinalSmoothingString in parcellated filename allows subsequent commands to work for either dtseries or ptseries
-	${CARET7DIR}/wb_command -cifti-parcellate ${FinalFile} ${ParcellationFile} COLUMN ${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefMRIName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_clean.ptseries.nii
+	if [ "${Pipeline}" = "HCP" ]; then
+		${CARET7DIR}/wb_command -cifti-parcellate ${FinalFile} ${ParcellationFile} COLUMN ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAString}${Extension}
+	else
+		echo "do stuff"
+	fi
 fi
 
 ### Apply spatial smoothing to CIFTI dense analysis

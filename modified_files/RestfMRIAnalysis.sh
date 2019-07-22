@@ -55,9 +55,18 @@ while [ ${index} -lt ${numArgs} ]; do
 			outdir=${argument#*=}
 			index=$(( index + 1 ))
 			;;
+		--AtlasFolder=*)
+			AtlasFolder=${argument#*=}
+			index=$(( index + 1 ))
+			;;
 		--pipeline=*)
 			Pipeline=${argument#*=}
 			index=$(( index + 1 ))
+			;;
+		--ICAoutputs=*)
+			ICAoutputs=${argument#*=}
+			index=$(( index + 1 ))
+			;;
 		--finalfile=*)
 			FinalFile=${argument#*=}
 			index=$(( index + 1 ))
@@ -132,13 +141,16 @@ while [ ${index} -lt ${numArgs} ]; do
 	esac
 done
 
-
 # Write command-line arguments to log file
 echo "READ_ARGS: outdir: ${outdir}"
 echo "READ_ARGS: Pipeline: ${Pipeline}"
+echo "READ_ARGS: AtlasFolder: ${AtlasFolder}"
+echo "READ_ARGS: ICAoutputs: ${ICAoutputs}"
 echo "READ_ARGS: File Derivative to Use for Analysis: ${FinalFile}"
 echo "READ_ARGS: fMRIFilename: ${fMRIFilename}"
 echo "READ_ARGS: fMRIFolderName: ${fMRIFolderName}"
+echo "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
+echo "READ_ARGS: LevelTwofsfName: ${LevelTwofsfName}"
 echo "READ_ARGS: LowResMesh: ${LowResMesh}"
 echo "READ_ARGS: GrayordinatesResolution: ${GrayordinatesResolution}"
 echo "READ_ARGS: OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
@@ -150,6 +162,7 @@ echo "READ_ARGS: RegName: ${RegName}"
 echo "READ_ARGS: Parcellation: ${Parcellation}"
 echo "READ_ARGS: ParcellationFile: ${ParcellationFile}"
 echo "READ_ARGS: seedROI: ${seedROI}"
+
 ########################################## MAIN #########################################
 
 # Determine locations of necessary directories (using expected naming convention)
@@ -166,27 +179,28 @@ for LevelOnefMRIName in $( echo $LevelOnefMRINames | sed 's/@/ /g' ) ; do
 	echo "MAIN: RUN_LEVEL1: LevelOnefMRIName: ${LevelOnefMRIName}"	
 	# Get corresponding fsf name from $LevelOnefsfNames list
 	LevelOnefsfName=`echo $LevelOnefsfNames | cut -d "@" -f $i`
-	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh $outdir $Pipeline $FinalFile $fmriFilename $fMRIFolderName $ResultsFolder $ROIsFolder $DownSampleFolder $LowResMesh $GrayordinatesResolution $OriginalSmoothingFWHM $Confound $FinalSmoothingFWHM $TemporalFilter $VolumeBasedProcessing $RegName $Parcellation $ParcellationFile $seedROI"
+	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh --outdir $outdir --pipeline $Pipeline --ICAoutputs $ICAoutputs --finalfile $FinalFile --fmrifilename $fmriFilename --fmrifoldername $fMRIFolderName --ResultsFolder $ResultsFolder --ROIsFolder $ROIsFolder --DownSampleFolder $DownSampleFolder --lowresmesh $LowResMesh --grayordinatesres $GrayordinatesResolution --origsmoothingFWHM $OriginalSmoothingFWHM --confound $Confound --finalsmoothingFWHM $FinalSmoothingFWHM --temporalfilter $TemporalFilter --vba $VolumeBasedProcessing --regname $RegName --parcellation $Parcellation --parcellationfile $ParcellationFile --seedROI $seedROI"
 	/RestfMRILevel1.sh \
-		$outdir \
-		$Pipeline \
-		$FinalFile \
-		$fmriFilename \
-		$fMRIFolderName \
-		$ResultsFolder \
-		$ROIsFolder \
-		$DownSampleFolder \
-		$LowResMesh \
-		$GrayordinatesResolution \
-		$OriginalSmoothingFWHM \
-		$Confound \
-		$FinalSmoothingFWHM \
-		$TemporalFilter \
-		$VolumeBasedProcessing \
-		$RegName \
-		$Parcellation \
-		$ParcellationFile \
-		$seedROI
+		--outdir $outdir \
+		--pipeline $Pipeline \
+		--ICAoutputs $ICAoutputs \
+		--finalfile $FinalFile \
+		--fmrifilename $fmriFilename \
+		--fmrifoldername $fMRIFolderName \
+		--ResultsFolder $ResultsFolder \
+		--ROIsFolder $ROIsFolder \
+		--DownSampleFolder $DownSampleFolder \
+		--lowresmesh $LowResMesh \
+		--grayordinatesres $GrayordinatesResolution \
+		--origsmoothingFWHM $OriginalSmoothingFWHM \
+		--confound $Confound \
+		--finalsmoothingFWHM $FinalSmoothingFWHM \
+		--temporalfilter $TemporalFilter \
+		--vba $VolumeBasedProcessing \
+		--regname $RegName \
+		--parcellation $Parcellation \
+		--parcellationfile $ParcellationFile \
+		--seedROI $seedROI
 	i=$(($i+1))
 done
 

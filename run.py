@@ -45,9 +45,10 @@ def run_seed_FirstLevel_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
     cmd = '{HCPPIPEDIR}/TaskfMRIAnalysis/RestfMRIAnalysis.sh ' + \
-        '--pipeline="{pipeline}" ' + \
         '--outdir="{outdir}" ' + \
         '--AtlasFolder="{AtlasFolder}" '  + \
+        '--ICAoutputs="{ICAoutputs}" ' + \
+        '--pipeline="{pipeline}" ' + \
         '--finalfile="{finalfile} ' + \
         '--fmrifilename="{fmrifilename}" ' + \
         '--fmrifoldername="{fmrifoldername}" ' + \
@@ -108,6 +109,12 @@ seed_handling = args.seed_handling
 seed_analysis_output = args.seed_analysis_output
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 
+ # use ICA outputs
+if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
+    ICAoutputs = 'YES'
+else:
+    ICAoutputs = 'NO'
+
 # need a subject label in order to start
 if args.participant_label:
     subject_label=args.participant_label
@@ -126,7 +133,7 @@ if ses_to_analyze:
         # retrieve preprocessing BIDS layout for participant specified
         if args.preprocessing_type == 'HCP':
             # use ICA outputs
-            if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
+            if ICAoutputs == 'YES':
                 bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,type='clean',extensions="dtseries.nii", task='rest') if msm_all_reg_name in f.filename]
             
             # do not use ICA outputs
@@ -135,7 +142,7 @@ if ses_to_analyze:
 
         elif args.preprocessing_type == 'fmriprep':
             #use ICA outputs
-            if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
+            if ICAoutputs == 'YES':
                 bolds = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
             # do not use ICA outputs
             else:
@@ -146,7 +153,7 @@ if ses_to_analyze:
                 reptime = float("%.1f" % zooms[3])
                 fmrires = str(int(min(zooms[:3])))
                 shortfmriname=fmritcs.split("/")[-2]
-                AtlasFolder='/'.join(fmritcs.split("/")[0:5])
+                AtlasFolder='/'.join(fmritcs.split("/")[0:4])
                 fmriname = os.path.basename(fmritcs).split(".")[0]
                 assert fmriname
 
@@ -157,7 +164,10 @@ if ses_to_analyze:
                     separator = "-"
                     seed_ROI_merged_string = separator.join(seed_ROI_name)
                     regressor_file = seed_ROI_merged_string + '-Regressor.txt'
-                    write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                    if args.preprocessing_type == 'HCP':
+                        write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                    elif args.preprocessing_type == 'fmriprep':
+                        pass
                     if not regressor_file:
                         raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                     if seed_analysis_output == 'dense':
@@ -169,21 +179,22 @@ if ses_to_analyze:
                                                                                 highpass=highpass,
                                                                                 fmrires=fmrires)),
                                                     ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                                    pipeline=args.preprocessing_type,
                                                                                     outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label),
-                                                                                    lowresmesh=lowresmesh,
-                                                                                    finalfile=fmritcs,
-                                                                                    fmrifoldername=shortfmriname,
                                                                                     AtlasFolder=AtlasFolder,
+                                                                                    pipeline=args.preprocessing_type,
+                                                                                    ICAoutputs=ICAoutputs,
+                                                                                    finalfile=fmritcs,
                                                                                     fmrifilename=fmriname,
-                                                                                    fmrires=fmrires,
-                                                                                    smoothing=smoothing,
-                                                                                    parcel_file=parcel_file,
-                                                                                    parcel_name=parcel_name,
-                                                                                    temporal_filter=highpass,
-                                                                                    regname=msm_all_reg_name,
+                                                                                    fmrifoldername=shortfmriname,
                                                                                     level_2_task=level_2_task,
                                                                                     level_2_fsf=level_2_fsf,
+                                                                                    lowresmesh=lowresmesh,
+                                                                                    fmrires=fmrires,
+                                                                                    smoothing=smoothing,
+                                                                                    temporal_filter=highpass,
+                                                                                    parcel_file=parcel_file,
+                                                                                    parcel_name=parcel_name,
+                                                                                    regname=msm_all_reg_name,
                                                                                     seedROI=seed_ROI_merged_string))])
                     for stage, stage_func in task_stages_dict.iteritems():
                         if stage in args.stages:
@@ -193,7 +204,10 @@ if ses_to_analyze:
                         parcel_file = args.parcellation_file
                         parcel_name = args.parcellation_name
                         regressor_file = seed + '-Regressor.txt'
-                        write_regressor(cifti_file, parcel_file, seed, regressor_file)
+                        if args.preprocessing_type == 'HCP':
+                            write_regressor(fmritcs, parcel_file, seed, regressor_file)
+                        elif args.preprocessing_type == 'fmriprep':
+                            pass
                         if not regressor_file:
                             raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                         if seed_analysis_output == 'dense':
@@ -205,27 +219,33 @@ if ses_to_analyze:
                                                                 highpass=highpass,
                                                                 fmrires=fmrires)),
                                 ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                path=args.output_dir + "/sub-%s" % (subject_label),
-                                                                subject="ses-%s" % (ses_label),
-                                                                lowresmesh=lowresmesh,
-                                                                shortfmriname=shortfmriname,
-                                                                smoothing=smoothing,
-                                                                fmriname=fmriname,
-                                                                fmrires=fmrires,
-                                                                parcel_file=parcel_file,
-                                                                parcel_name=parcel_name,
-                                                                temporal_filter=highpass,
-                                                                regname=msm_all_reg_name,
-                                                                level_2_task=level_2_task,
-                                                                level_2_fsf=level_2_fsf,
-                                                                seedROI=seed))])
+                                                                                    outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label),
+                                                                                    AtlasFolder=AtlasFolder,
+                                                                                    pipeline=args.preprocessing_type,
+                                                                                    ICAoutputs=ICAoutputs,
+                                                                                    finalfile=fmritcs,
+                                                                                    fmrifilename=fmriname,
+                                                                                    fmrifoldername=shortfmriname,
+                                                                                    level_2_task=level_2_task,
+                                                                                    level_2_fsf=level_2_fsf,
+                                                                                    lowresmesh=lowresmesh,
+                                                                                    fmrires=fmrires,
+                                                                                    smoothing=smoothing,
+                                                                                    temporal_filter=highpass,
+                                                                                    parcel_file=parcel_file,
+                                                                                    parcel_name=parcel_name,
+                                                                                    regname=msm_all_reg_name,
+                                                                                    seedROI=seed_ROI_merged_string))])
 
                         for stage, stage_func in task_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
             elif len(seed_ROI_name) == 1:
                 regressor_file = seed_ROI_name[0] + '-Regressor.txt'
-                write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file)
+                if args.preprocessing_type == 'HCP':
+                    write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                elif args.preprocessing_type == 'fmriprep':
+                    pass
                 if not regressor_file:
                     raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                 if seed_analysis_output == 'dense':
@@ -237,19 +257,22 @@ if ses_to_analyze:
                                                                 highpass=highpass,
                                                                 fmrires=fmrires,)),
                                 ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                path=args.output_dir + "/sub-%s" % (subject_label),
-                                                                subject="ses-%s" % (ses_label),
-                                                                lowresmesh=lowresmesh,
-                                                                shortfmriname=shortfmriname,
-                                                                smoothing=smoothing,
-                                                                fmriname=fmriname,
-                                                                fmrires=fmrires,
-                                                                parcel_file=parcel_file,
-                                                                parcel_name=parcel_name,
-                                                                temporal_filter=highpass,
-                                                                regname=msm_all_reg_name,
+                                                                outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label),
+                                                                AtlasFolder=AtlasFolder,
+                                                                pipeline=args.preprocessing_type,
+                                                                ICAoutputs=ICAoutputs,
+                                                                finalfile=fmritcs,
+                                                                fmrifilename=fmriname,
+                                                                fmrifoldername=shortfmriname,
                                                                 level_2_task=level_2_task,
                                                                 level_2_fsf=level_2_fsf,
+                                                                lowresmesh=lowresmesh,
+                                                                fmrires=fmrires,
+                                                                smoothing=smoothing,
+                                                                temporal_filter=highpass,
+                                                                parcel_file=parcel_file,
+                                                                parcel_name=parcel_name,
+                                                                regname=msm_all_reg_name,
                                                                 seedROI=seed_ROI_name[0]))])
                 for stage, stage_func in task_stages_dict.iteritems():
                     if stage in args.stages:
@@ -258,7 +281,7 @@ else:
     # retrieve preprocessing BIDS layout for participant specified
     if args.preprocessing_type == 'HCP':
         # use ICA outputs
-        if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
+        if ICAoutputs == 'YES':
             bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',extensions="dtseries.nii", task='rest') if msm_all_reg_name in f.filename]
             
         # do not use ICA outputs
@@ -267,24 +290,31 @@ else:
 
     elif args.preprocessing_type == 'fmriprep':
         #use ICA outputs
-        if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
+        if ICAoutputs == 'YES':
             bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
         # do not use ICA outputs
         else:
             bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'preproc' in f.filename]
 
     for fmritcs in bolds:
-        fmriname = fmritcs.path.basename.split(".")[0]
-        assert fmriname
-        zooms = nibabel.load(fmritcs).get_header().get_zooms()
-        reptime = float("%.1f" % zooms[3])
-        fmrires = str(float(min(zooms[:3])))
+        if args.preprocessing_type == 'HCP':
+            zooms = nibabel.load(fmritcs).get_header().get_zooms()
+            reptime = float("%.1f" % zooms[3])
+            fmrires = str(float(min(zooms[:3])))
+            shortfmriname=fmritcs.split("/")[-2]
+            fmriname = fmritcs.path.basename.split(".")[0]
+            assert fmriname
+        elif args.preprocessing_type == 'fmriprep':
+            pass
         if len(seed_ROI_name) > 1:
             if seed_handling == "together":
                 separator = "-"
                 seed_ROI_merged_string = separator.join(seed_ROI_name)
                 regressor_file = seed_ROI_merged_string + '-Regressor.txt'
-                write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                if args.preprocessing_type == 'HCP':
+                    write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                elif args.preprocessing_type == 'fmriprep':
+                    pass
                 if not regressor_file:
                     raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                 if seed_analysis_output == 'dense':
@@ -296,18 +326,23 @@ else:
                                                                             highpass=highpass,
                                                                             fmrires=fmrires)),
                                             ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                            path=args.output_dir,
-                                                                            subject="sub-%s" % (subject_label),
-                                                                            lowresmesh=lowresmesh,
-                                                                            shortfmriname=shortfmriname,
-                                                                            fmrires=fmrires,
-                                                                            fmriname=fmriname,
-                                                                            parcellation_file=parcel_file,
-                                                                            parcellation=parcel_name,
-                                                                            temporal_filter=highpass,
-                                                                            regname=msm_all_reg_name,
+                                                                            outdir=args.output_dir + "/sub-%s" % (subject_label),
+                                                                            AtlasFolder=AtlasFolder,
+                                                                            pipeline=args.preprocessing_type,
+                                                                            ICAoutputs=ICAoutputs,
+                                                                            finalfile=fmritcs,
+                                                                            fmrifilename=fmriname,
+                                                                            fmrifoldername=shortfmriname,
                                                                             level_2_task=level_2_task,
-                                                                            level_2_fsf=level_2_fsf))])
+                                                                            level_2_fsf=level_2_fsf,
+                                                                            lowresmesh=lowresmesh,
+                                                                            fmrires=fmrires,
+                                                                            smoothing=smoothing,
+                                                                            temporal_filter=highpass,
+                                                                            parcel_file=parcel_file,
+                                                                            parcel_name=parcel_name,
+                                                                            regname=msm_all_reg_name,
+                                                                            seedROI=seed_ROI_merged_string))])
 
                 for stage, stage_func in task_stages_dict.iteritems():
                     if stage in args.stages:
@@ -315,7 +350,10 @@ else:
             else:
                 for seed in seed_ROI_name:
                     regressor_file = seed + '-Regressor.txt'
-                    write_regressor(cifti_file, parcel_file, seed, regressor_file)
+                    if args.preprocessing_type == 'HCP':
+                        write_regressor(fmritcs, parcel_file, seed, regressor_file)
+                    elif args.preprocessing_type == 'fmriprep':
+                        pass
                     if not regressor_file:
                         raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                     if seed_analysis_output == 'dense':
@@ -327,19 +365,22 @@ else:
                                                                             highpass=highpass,
                                                                             fmrires=fmrires,)),
                                             ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                            path=args.output_dir,
-                                                                            subject="sub-%s" % (subject_label),
-                                                                            lowresmesh=lowresmesh,
-                                                                            shortfmriname=shortfmriname,
-                                                                            smoothing=smoothing,
-                                                                            fmriname=fmriname,
-                                                                            fmrires=fmrires,
-                                                                            parcel_file=parcel_file,
-                                                                            parcel_name=parcel_name,
-                                                                            temporal_filter=highpass,
-                                                                            regname=msm_all_reg_name,
+                                                                            outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label),
+                                                                            AtlasFolder=AtlasFolder,
+                                                                            pipeline=args.preprocessing_type,
+                                                                            ICAoutputs=ICAoutputs,
+                                                                            finalfile=fmritcs,
+                                                                            fmrifilename=fmriname,
+                                                                            fmrifoldername=shortfmriname,
                                                                             level_2_task=level_2_task,
                                                                             level_2_fsf=level_2_fsf,
+                                                                            lowresmesh=lowresmesh,
+                                                                            fmrires=fmrires,
+                                                                            smoothing=smoothing,
+                                                                            temporal_filter=highpass,
+                                                                            parcel_file=parcel_file,
+                                                                            parcel_name=parcel_name,
+                                                                            regname=msm_all_reg_name,
                                                                             seedROI=seed))])
                     for stage, stage_func in task_stages_dict.iteritems():
                         if stage in args.stages:
@@ -358,21 +399,23 @@ else:
                                                                             highpass=highpass,
                                                                             fmrires=fmrires)),
                                             ("rsfMRISeedAnalysis", partial(run_seed_FirstLevel_rsfMRI_processing,
-                                                                            path=args.output_dir,
-                                                                            subject="sub-%s" % (subject_label),
-                                                                            lowresmesh=lowresmesh,
-                                                                            shortfmriname=shortfmriname,
-                                                                            smoothing=smoothing,
-                                                                            fmriname=fmriname,
-                                                                            fmrires=fmrires,
-                                                                            parcel_file=parcel_file,
-                                                                            parcel_name=parcel_name,
-                                                                            temporal_filter=highpass,
-                                                                            regname=msm_all_reg_name,
+                                                                            outdir=args.output_dir + "/sub-%s" % (subject_label),
+                                                                            AtlasFolder=AtlasFolder,
+                                                                            pipeline=args.preprocessing_type,
+                                                                            ICAoutputs=ICAoutputs,
+                                                                            finalfile=fmritcs,
+                                                                            fmrifilename=fmriname,
+                                                                            fmrifoldername=shortfmriname,
                                                                             level_2_task=level_2_task,
                                                                             level_2_fsf=level_2_fsf,
+                                                                            lowresmesh=lowresmesh,
+                                                                            fmrires=fmrires,
+                                                                            smoothing=smoothing,
+                                                                            temporal_filter=highpass,
+                                                                            parcel_file=parcel_file,
+                                                                            parcel_name=parcel_name,
+                                                                            regname=msm_all_reg_name,
                                                                             seedROI=seed_ROI_name[0]))])
             for stage, stage_func in task_stages_dict.iteritems():
                 if stage in args.stages:
                     stage_func()
-                    
