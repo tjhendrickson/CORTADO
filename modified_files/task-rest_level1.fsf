@@ -169,7 +169,7 @@ set fmri(totalVoxels) TOTVOXELS
 set fmri(ncopeinputs) 0
 
 # 4D AVW data or FEAT directory (1)
-set feat_files(1) "../FEATFILE"
+set feat_files(1) "FEATFILE"
 
 # Add confound EVs text file
 set fmri(confoundevs) 0

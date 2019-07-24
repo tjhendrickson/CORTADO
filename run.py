@@ -50,6 +50,7 @@ def run_seed_FirstLevel_rsfMRI_processing(**args):
         '--ICAoutputs="{ICAoutputs}" ' + \
         '--pipeline="{pipeline}" ' + \
         '--finalfile="{finalfile} ' + \
+        '--boldref="${bold_ref}" ' + \
         '--fmrifilename="{fmrifilename}" ' + \
         '--fmrifoldername="{fmrifoldername}" ' + \
         '--lvl2task="{level_2_task}" ' + \
@@ -60,7 +61,6 @@ def run_seed_FirstLevel_rsfMRI_processing(**args):
         '--confound="NONE" ' + \
         '--finalsmoothingFWHM="{smoothing:d}" ' + \
         '--temporalfilter="{temporal_filter}" ' + \
-        '--vba="NO" ' + \
         '--regname="{regname}" ' + \
         '--parcellation="{parcel_name}" ' + \
         '--parcellationfile="{parcel_file}" ' + \
@@ -147,7 +147,9 @@ if ses_to_analyze:
             # do not use ICA outputs
             else:
                 bolds = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='bold',task='rest') if 'preproc' in f.filename]
-        for fmritcs in bolds:
+            # will need bold reference images
+            bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
+        for idx,fmritcs in enumerate(bolds):
             if args.preprocessing_type == 'HCP':
                 zooms = nibabel.load(fmritcs).get_header().get_zooms()
                 reptime = float("%.1f" % zooms[3])
@@ -156,9 +158,12 @@ if ses_to_analyze:
                 AtlasFolder='/'.join(fmritcs.split("/")[0:4])
                 fmriname = os.path.basename(fmritcs).split(".")[0]
                 assert fmriname
+                bold_ref = "NONE"
 
             elif args.preprocessing_type == 'fmriprep':
-                pass
+                #reference image
+                bold_ref = bolds_ref[idx]
+
             if len(seed_ROI_name) > 1:
                 if seed_handling == "together":
                     separator = "-"
@@ -184,6 +189,7 @@ if ses_to_analyze:
                                                                                     pipeline=args.preprocessing_type,
                                                                                     ICAoutputs=ICAoutputs,
                                                                                     finalfile=fmritcs,
+                                                                                    bold_ref=bold_ref,
                                                                                     fmrifilename=fmriname,
                                                                                     fmrifoldername=shortfmriname,
                                                                                     level_2_task=level_2_task,
@@ -224,6 +230,7 @@ if ses_to_analyze:
                                                                                     pipeline=args.preprocessing_type,
                                                                                     ICAoutputs=ICAoutputs,
                                                                                     finalfile=fmritcs,
+                                                                                    bold_ref=bold_ref,
                                                                                     fmrifilename=fmriname,
                                                                                     fmrifoldername=shortfmriname,
                                                                                     level_2_task=level_2_task,
@@ -262,6 +269,7 @@ if ses_to_analyze:
                                                                 pipeline=args.preprocessing_type,
                                                                 ICAoutputs=ICAoutputs,
                                                                 finalfile=fmritcs,
+                                                                bold_ref=bold_ref,
                                                                 fmrifilename=fmriname,
                                                                 fmrifoldername=shortfmriname,
                                                                 level_2_task=level_2_task,
@@ -295,8 +303,8 @@ else:
         # do not use ICA outputs
         else:
             bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'preproc' in f.filename]
-
-    for fmritcs in bolds:
+        bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
+    for idx,fmritcs in enumerate(bolds):
         if args.preprocessing_type == 'HCP':
             zooms = nibabel.load(fmritcs).get_header().get_zooms()
             reptime = float("%.1f" % zooms[3])
@@ -304,8 +312,9 @@ else:
             shortfmriname=fmritcs.split("/")[-2]
             fmriname = fmritcs.path.basename.split(".")[0]
             assert fmriname
+            bold_ref = "NONE"
         elif args.preprocessing_type == 'fmriprep':
-            pass
+            bold_ref = bolds_ref[idx]
         if len(seed_ROI_name) > 1:
             if seed_handling == "together":
                 separator = "-"
@@ -331,6 +340,7 @@ else:
                                                                             pipeline=args.preprocessing_type,
                                                                             ICAoutputs=ICAoutputs,
                                                                             finalfile=fmritcs,
+                                                                            bold_ref = bolds_ref[idx],
                                                                             fmrifilename=fmriname,
                                                                             fmrifoldername=shortfmriname,
                                                                             level_2_task=level_2_task,
@@ -370,6 +380,7 @@ else:
                                                                             pipeline=args.preprocessing_type,
                                                                             ICAoutputs=ICAoutputs,
                                                                             finalfile=fmritcs,
+                                                                            bold_ref = bolds_ref[idx],
                                                                             fmrifilename=fmriname,
                                                                             fmrifoldername=shortfmriname,
                                                                             level_2_task=level_2_task,
@@ -404,6 +415,7 @@ else:
                                                                             pipeline=args.preprocessing_type,
                                                                             ICAoutputs=ICAoutputs,
                                                                             finalfile=fmritcs,
+                                                                            bold_ref = bolds_ref[idx]
                                                                             fmrifilename=fmriname,
                                                                             fmrifoldername=shortfmriname,
                                                                             level_2_task=level_2_task,
