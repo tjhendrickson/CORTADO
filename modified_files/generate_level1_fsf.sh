@@ -151,16 +151,16 @@ main() {
 	fsf_template_file="/task-rest_level1.fsf"
 
 	# does ${outdir} exist? if not create it
-	if [ ! -d ${outdir} ]; then
+	if [ ! -d "${outdir}" ]; then
 		mkdir -p ${outdir}
 	fi
 
 	# copy the template file to the intended destination FSF file
-	cp -p ${fsf_template_file} ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf
+	cp -p ${fsf_template_file} ${outdir}/${taskname}${OriginalSmoothingString}_level1.fsf
 
 	echo ""
 	echo "Level 1 FSF file generated at: "
-	echo "  ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level1.fsf"
+	echo "  ${outdir}/${taskname}${OriginalSmoothingString}_level1.fsf"
 	echo ""
 
 }

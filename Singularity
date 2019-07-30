@@ -40,7 +40,7 @@ export FSLOUTPUTTYPE=NIFTI_GZ
 mkdir /share
 mkdir /scratch
 mkdir /local-scratch
-mkdir /bids_dir
+mkdir /input_dir
 mkdir /output_dir
 mkdir /fsf_template_dir
 touch /parcel_dlabel.nii

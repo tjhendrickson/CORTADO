@@ -7,14 +7,16 @@ import cifti
 import re
 import pdb
 
-def write_regressor(cifti_file, parcel_file, seed_ROI_name, regressor_file):
+def write_regressor(output_dir,cifti_file, parcel_file, seed_ROI_name, regressor_file):
     
+    print('output_dir: ' + output_dir)
     print('cifti_file: ' + cifti_file)
     print('parcel_file: ' + parcel_file)
     print('seed_ROI_name: ' + str(seed_ROI_name))
     print('regressor_file: ' + regressor_file)
     
-        
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
     read_parcel_file = cifti.read(parcel_file)
     parcel_file_label_tuple = read_parcel_file[1][0][0][1]
     parcel_labels = []
