@@ -164,7 +164,7 @@ if ses_to_analyze:
             bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
         for idx,fmritcs in enumerate(bolds):
             if preprocessing_type == 'HCP':
-                vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','.nii.gz')
+                vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
                 zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
                 fmrires = str(int(min(zooms[:3])))
                 shortfmriname=fmritcs.split("/")[-2]

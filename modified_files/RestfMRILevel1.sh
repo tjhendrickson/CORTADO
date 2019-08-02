@@ -284,13 +284,17 @@ get_options()
 	# Create output .feat directory ($FEATDir) for this analysis
 	FEATDir="${outdir}/${fMRIFilename}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1_${seedROI}_ROI.feat"
 	echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
-
 	if [ -e ${FEATDir} ]; then
 		rm -r ${FEATDir}
 		mkdir ${FEATDir}
 	else
 		mkdir -p ${FEATDir}
 	fi
+
+	# Create regressor_file variables
+	regressor_file="${seedROI}-Regressor.txt"
+	echo "MAIN: MAKE_REGRESSOR_FILE: regressor_file: ${regressor_file}"
+
 		# Determine whether to run Volume, and set strings used for filenaming
 	if [ "${Pipeline}" = "fmriprep" ]; then
 		runVolume=true;
@@ -307,6 +311,9 @@ get_options()
 		# now number of voxels in image file
 		FMRI_VOXS=`fslstats ${FinalFile} -v | awk '{print $1} '`
 		echo "MAIN: IMAGE_INFO: Total Voxels: ${FMRI_VOXS}"
+
+		# modify file within if else statement due to HCP versus fmriprep derivative differences
+		sed -i "s:FEATFILE:${FinalFile}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	elif [ "${Pipeline}" = "HCP" ]; then
 		# get the number of time points in the image file
 		FMRI_NPTS=`fslinfo ${volFinalFile} | grep -w 'dim4' | awk '{print $2}'`
@@ -319,17 +326,22 @@ get_options()
 		# now number of voxels in image file
 		FMRI_VOXS=`fslstats ${volFinalFile} -v | awk '{print $1} '`
 		echo "MAIN: IMAGE_INFO: Total Voxels: ${FMRI_VOXS}"
+
+		# modify file within if else statement due to HCP versus fmriprep derivative differences
+		sed -i "s:FEATFILE:${volFinalFile}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	fi
 
-	
 	# modify the fsf file with sed to place in pertinent fMRI file information
 	sed -i "s/NTPS/${FMRI_NPTS}/" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	sed -i "s:TRS:${FMRI_TR}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	sed -i "s:TOTVOXELS:${FMRI_VOXS}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:HPASS:${temporalfilter}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
-	sed -i "s:FEATFILE:${FinalFile}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
+	sed -i "s:HPASS:${TemporalFilter}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	sed -i "s:REGRESSOR:${regressor_file}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	sed -i "s:SMOOTH:${FinalSmoothingFWHM}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
+
+	# copy fsf into FEATDir folder
+	echo cp ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf ${FEATDir}/design.fsf
+	cp ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf ${FEATDir}/design.fsf
 
 	### Use fsf to create additional design files used by film_gls
 	echo "MAIN: MAKE_DESIGNS: Create design files, model confounds if desired"

@@ -32,17 +32,15 @@ def write_regressor(output_dir,cifti_file, parcel_file, seed_ROI_name, regressor
 
     # if not parcellated, first parcellate, then proceed to write regressor
     cifti_file_basename = os.path.basename(cifti_file)
-    cifti_file_folder = os.path.dirname(cifti_file)
+    cifti_file_folder = output_dir
     if ".dtseries.nii" in cifti_file_basename:
-        if not os.path.isdir(os.path.join(cifti_file_folder,"RestingStateStats")):
-            os.mkdir(os.path.join(cifti_file_folder,"RestingStateStats"))
         cifti_prefix = cifti_file_basename.split(".dtseries.nii")[0]
         os.system("/opt/workbench/bin_rh_linux64/wb_command -cifti-parcellate %s %s %s %s" 
                   % (cifti_file, 
                      parcel_file, 
                      "COLUMN", 
-                     os.path.join(cifti_file_folder,"RestingStateStats",cifti_prefix) + ".ptseries.nii"))
-        cifti_file = os.path.join(cifti_file_folder,"RestingStateStats",cifti_prefix) + ".ptseries.nii"
+                     os.path.join(cifti_file_folder,cifti_prefix) + ".ptseries.nii"))
+        cifti_file = os.path.join(cifti_file_folder,cifti_prefix) + ".ptseries.nii"
         try:
             cifti_load = nibabel.cifti2.cifti2.load(cifti_file)
         except IOError:
