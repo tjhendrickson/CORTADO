@@ -208,7 +208,7 @@ get_options()
 	echo "READ_ARGS: seedROI: ${seedROI}"
 }
 ########################################## MAIN ##################################
-#main(){
+main(){
 	get_options $@
 	show_tool_versions
 
@@ -216,19 +216,6 @@ get_options()
 
 	# initialize run variables
 	runParcellated=false; runVolume=false; runDense=false;
-
-	# Determine whether to run 112-86Parcellated, and set strings used for filenaming
-	if [ "${Parcellation}" != "NONE" ]; then
-		# Run Parcellated Analyses
-		runParcellated=true;
-		ParcellationString="_${Parcellation}"
-		if [ "${Pipeline}" = "HCP" ]; then
-			Extension=".ptseries.nii"
-		elif [ "${Pipeline}" = "fmriprep" ]; then
-			Extension="_parcellated.nii.gz"
-		fi
-		echo "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
-	fi
 
 	# determine whether to use ICA denoised outputs or not
 	if [ "${ICAoutputs}" = 'YES' ]; then
@@ -241,6 +228,23 @@ get_options()
 		ICAString=""
 	fi
 
+	# Determine whether to run Parcellated, and set strings used for filenaming
+	if [ "${Parcellation}" != "NONE" ]; then
+		# Run Parcellated Analyses
+		runParcellated=true;
+		ParcellationString="_${Parcellation}"
+		if [ "${Pipeline}" = "HCP" ]; then
+			Extension=".ptseries.nii"
+		elif [ "${Pipeline}" = "fmriprep" ]; then
+			Extension="_parcellated.nii.gz"
+		fi
+		echo "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
+	fi
+
+	if [ "${Pipeline}" = "fmriprep" ]; then
+		runVolume=true;
+		echo "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
+	fi
 
 	# Determine whether to run Dense, and set strings used for filenaming
 	if [ "${Parcellation}" = "NONE" ]; then
@@ -256,14 +260,11 @@ get_options()
 		fi
 	fi
 
-
-
-
-
 	##### SET_NAME_STRINGS: smoothing and filtering string variables used for file naming #####
 	OriginalSmoothingString="_s${OriginalSmoothingFWHM}"
 	FinalSmoothingString="_s${FinalSmoothingFWHM}"
 	TemporalFilterString="_hp${TemporalFilter}"
+	
 	# Set variables used for different registration procedures
 	if [ "${RegName}" != "NONE" ]; then
 		RegString="_${RegName}"
@@ -297,8 +298,6 @@ get_options()
 
 		# Determine whether to run Volume, and set strings used for filenaming
 	if [ "${Pipeline}" = "fmriprep" ]; then
-		runVolume=true;
-		echo "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
 
 		# get the number of time points in the image file
 		FMRI_NPTS=`fslinfo ${FinalFile} | grep -w 'dim4' | awk '{print $2}'`
@@ -316,11 +315,11 @@ get_options()
 		sed -i "s:FEATFILE:${FinalFile}:g" ${outdir}/${fMRIFilename}${OriginalSmoothingString}_level1.fsf
 	elif [ "${Pipeline}" = "HCP" ]; then
 		# get the number of time points in the image file
-		FMRI_NPTS=`fslinfo ${volFinalFile} | grep -w 'dim4' | awk '{print $2}'`
+		FMRI_NPTS=`${CARET7DIR}/wb_command  -file-information ${FinalFile} -no-map-info -only-number-of-maps`
 		echo "MAIN: IMAGE_INFO: npts: ${FMRI_NPTS}"
 
 		# now the TR in the image file
-		FMRI_TR=`fslinfo ${volFinalFile} | grep -w 'pixdim4' | awk '{print $2}'`
+		FMRI_TR=`${CARET7DIR}/wb_command -file-information ${FinalFile} -no-map-info -only-step-interval`
 		echo "MAIN: IMAGE_INFO: TR: ${FMRI_TR}"
 
 		# now number of voxels in image file
@@ -525,7 +524,7 @@ get_options()
 		# Parcellated Processing
 		echo "MAIN: RUN_GLM: Parcellated Analysis"
 		# Convert CIFTI to "fake" NIFTI
-		${CARET7DIR}/wb_command -cifti-convert -to-nifti ${FinalFile} ${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAstring}_FAKENIFTI.nii.gz
+		${CARET7DIR}/wb_command -cifti-convert -to-nifti ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAString}${Extension} ${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAstring}_FAKENIFTI.nii.gz
 		# Now run film_gls on the fakeNIFTI file
 		film_gls --rn=${FEATDir}/ParcellatedStats --in=${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAstring}_FAKENIFTI.nii.gz --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --thr=1 --mode=volumetric
 		# Remove "fake" NIFTI time series file
@@ -533,7 +532,7 @@ get_options()
 		# Convert "fake" NIFTI output files (copes, varcopes, zstats) back to CIFTI
 		templateCIFTI=${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAString}${Extension}
 		for fakeNIFTI in `ls ${FEATDir}/ParcellatedStats/*.nii.gz` ; do
-			CIFTI=$( echo $fakeNIFTI | sed -e "s|.nii.gz|.${Extension}|" );
+			CIFTI=$( echo $fakeNIFTI | sed -e "s|.nii.gz|${Extension}|" );
 			${CARET7DIR}/wb_command -cifti-convert -from-nifti $fakeNIFTI $templateCIFTI $CIFTI -reset-timepoints 1 1
 			rm $fakeNIFTI;
 		done
@@ -552,7 +551,7 @@ get_options()
 		rm -f ${SmoothedDilatedResultFile}*.nii.gz
 	fi
 	echo "MAIN: Complete"
-#}
+}
 
 # Invoke the main function
-#main $@
+main $@

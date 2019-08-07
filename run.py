@@ -84,7 +84,7 @@ parser.add_argument('--session_label', help='The label of the session that shoul
                    '(so it does not include "ses-"). If this parameter is not '
                    'provided all sessions within a subject should be analyzed.',
                    nargs="+")
-parser.add_argument('--preprocessing_type', help='BIDS-apps preprocessing pipeline run on data. Choices include "HCP" and "fmriprep". ',choices=['HCP','fmriprep'],default='HCP',nargs="+")
+parser.add_argument('--preprocessing_type', help='BIDS-apps preprocessing pipeline run on data. Choices include "HCP" and "fmriprep". ',choices=['HCP','fmriprep'],default='HCP')
 parser.add_argument('--use_ICA_outputs',help='Use ICA (whether FIX or AROMA) outputs in seed analysis. Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='Yes')
 parser.add_argument('--stages',help='Which stages to run. Space separated list. ',nargs="+", choices=['rsfMRISeedAnalysis', 'Generatefsf'],default=['Generatefsf', 'rsfMRISeedAnalysis'])
 parser.add_argument('--combine_resting_scans',help='If multiple of the same resting state BIDS file type exist should they be combined prior seed analysis? Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='No')
@@ -110,7 +110,7 @@ seed_ROI_name = args.seed_ROI_name
 seed_handling = args.seed_handling
 seed_analysis_output = args.seed_analysis_output
 msm_all_reg_name = "MSMAll_2_d40_WRN"
-preprocessing_type = args.preprocessing_type[0]
+preprocessing_type = args.preprocessing_type
 
  # use ICA outputs
 if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
@@ -132,7 +132,7 @@ if args.participant_label:
     layout = BIDSLayout(args.input_dir)
 else:
     raise ValueError('An argument must be specified for participant label. Quitting.')
-
+pdb.set_trace()
 # if subject label has sessions underneath those need to be outputted into different directories
 if args.session_label:
     ses_to_analyze = args.session_label

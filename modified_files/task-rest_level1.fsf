@@ -31,7 +31,7 @@ set fmri(featwatcher_yn) 1
 set fmri(sscleanup_yn) 0
 
 # Output directory
-set fmri(outputdir) "task-rest_acq-eyesopen_hp200_s4_level1.fsf"
+set fmri(outputdir) ""
 
 # TR(s)
 set fmri(tr) TRS
@@ -83,10 +83,10 @@ set fmri(regunwarp_yn) 0
 set fmri(gdc) ""
 
 # EPI dwell time (ms)
-set fmri(dwell) 0.58
+set fmri(dwell) 0.7
 
 # EPI TE (ms)
-set fmri(te) 37
+set fmri(te) 35
 
 # % Signal loss threshold
 set fmri(signallossthresh) 10
@@ -267,7 +267,7 @@ set fmri(regstandard_nonlinear_warpres) 10
 set fmri(paradigm_hp) HPASS
 
 # Total voxels
-set fmri(totalVoxels) TOTVOXELS
+set fmri(totalVoxels) 541577400
 
 
 # Number of lower-level copes feeding into higher-level analysis
