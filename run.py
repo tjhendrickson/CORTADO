@@ -33,7 +33,8 @@ def run(command, env={}, cwd=None):
 
 def run_Generatefsf_level1_processing(**args):
     args.update(os.environ)
-    cmd = '/generate_level1_fsf.sh ' + \
+    #cmd = '/generate_level1_fsf.sh ' + \
+    cmd = '/home/range2-raid1/timothy/GitHub/CORTADO/modified_files/generate_level1_fsf.sh ' + \
         '--taskname="{fmriname}" ' + \
         '--temporalfilter="{highpass}" ' + \
         '--originalsmoothing="{fmrires}" ' + \
@@ -44,7 +45,8 @@ def run_Generatefsf_level1_processing(**args):
 def run_seed_FirstLevel_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
-    cmd = '/RestfMRIAnalysis.sh ' + \
+    #cmd = '/RestfMRIAnalysis.sh ' + \
+    cmd = '/home/range2-raid1/timothy/GitHub/CORTADO/modified_files/RestfMRIAnalysis.sh ' + \
         '--outdir="{outdir}" ' + \
         '--AtlasFolder="{AtlasFolder}" '  + \
         '--ICAoutputs="{ICAoutputs}" ' + \
@@ -66,7 +68,6 @@ def run_seed_FirstLevel_rsfMRI_processing(**args):
         '--parcellation="{parcel_name}" ' + \
         '--parcellationfile="{parcel_file}" ' + \
         '--seedROI="{seedROI}" '
-    pdb.set_trace()
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
@@ -129,10 +130,9 @@ else:
 # need a subject label in order to start
 if args.participant_label:
     subject_label=args.participant_label[0]
-    layout = BIDSLayout(args.input_dir)
+    layout = BIDSLayout(os.path.join(args.input_dir,'sub-'+subject_label))
 else:
     raise ValueError('An argument must be specified for participant label. Quitting.')
-pdb.set_trace()
 # if subject label has sessions underneath those need to be outputted into different directories
 if args.session_label:
     ses_to_analyze = args.session_label

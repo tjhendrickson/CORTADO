@@ -39,8 +39,8 @@ set -e
 
 # Parse expected arguments from command-line array
 get_options() {
-	local scriptName=$(basename ${0})
-    local arguments=($@)
+	scriptName=`basename $0`
+    arguments=($@)
     
     # initialize global output variables
 	unset outdir
@@ -206,32 +206,33 @@ main() {
 
 	# Run Level 1 analyses (from command line arguments)
 	echo "MAIN: RUN_LEVEL1: Running Level 1 Analysis"
-	if [ "${fMRIFolderName}" != "NONE" ]
-	then
-	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh --outdir $outdir --pipeline $Pipeline --ICAoutputs $ICAoutputs --finalfile $FinalFile --volfinalfile ${volFinalFile} --boldref ${BoldRef} --fmrifilename $fMRIFilename --fmrifoldername $fMRIFolderName --ResultsFolder $ResultsFolder --ROIsFolder $ROIsFolder --DownSampleFolder $DownSampleFolder --lowresmesh $LowResMesh --grayordinatesres $GrayordinatesResolution --origsmoothingFWHM $OriginalSmoothingFWHM --confound $Confound --finalsmoothingFWHM $FinalSmoothingFWHM --temporalfilter $TemporalFilter  --regname $RegName --parcellation $Parcellation --parcellationfile $ParcellationFile --seedROI $seedROI"
-	/RestfMRILevel1.sh \
-		--outdir=$outdir \
-		--pipeline=$Pipeline \
-		--ICAoutputs=$ICAoutputs \
-		--finalfile=$FinalFile \
-		--volfinalfile=$volFinalFile \
-		--boldref=${BoldRef} \
-		--fmrifilename=$fMRIFilename \
-		--fmrifoldername=$fMRIFolderName \
-		--ResultsFolder=$ResultsFolder \
-		--ROIsFolder=$ROIsFolder \
-		--DownSampleFolder=$DownSampleFolder \
-		--lowresmesh=$LowResMesh \
-		--grayordinatesres=$GrayordinatesResolution \
-		--origsmoothingFWHM=$OriginalSmoothingFWHM \
-		--confound=$Confound \
-		--finalsmoothingFWHM=$FinalSmoothingFWHM \
-		--temporalfilter=$TemporalFilter \
-		--regname=$RegName \
-		--parcellation=$Parcellation \
-		--parcellationfile=$ParcellationFile \
-		--seedROI=$seedROI
-	fi
+	#if [ "${fMRIFolderName}" != "NONE" ]
+	#then
+	#echo "MAIN: RUN_LEVEL1: Issuing command: /home/range2-raid1/timothy/GitHub/CORTADO/modified_files/RestfMRILevel1.sh --outdir $outdir --pipeline $Pipeline --ICAoutputs $ICAoutputs --finalfile $FinalFile --volfinalfile ${volFinalFile} --boldref ${BoldRef} --fmrifilename $fMRIFilename --fmrifoldername $fMRIFolderName --ResultsFolder $ResultsFolder --ROIsFolder $ROIsFolder --DownSampleFolder $DownSampleFolder --lowresmesh $LowResMesh --grayordinatesres $GrayordinatesResolution --origsmoothingFWHM $OriginalSmoothingFWHM --confound $Confound --finalsmoothingFWHM $FinalSmoothingFWHM --temporalfilter $TemporalFilter  --regname $RegName --parcellation $Parcellation --parcellationfile $ParcellationFile --seedROI $seedROI"
+	#/RestfMRILevel1.sh
+	#/home/range2-raid1/timothy/GitHub/CORTADO/modified_files/RestfMRILevel1.sh \
+	#--outdir=$outdir \
+	#	--pipeline=$Pipeline \
+	#	--ICAoutputs=$ICAoutputs \
+	#	--finalfile=$FinalFile \
+	#	--volfinalfile=$volFinalFile \
+	#	--boldref=${BoldRef} \
+	#	--fmrifilename=$fMRIFilename \
+	#	--fmrifoldername=$fMRIFolderName \
+	#	--ResultsFolder=$ResultsFolder \
+	#	--ROIsFolder=$ROIsFolder \
+	#	--DownSampleFolder=$DownSampleFolder \
+	#	--lowresmesh=$LowResMesh \
+	#	--grayordinatesres=$GrayordinatesResolution \
+	#	--origsmoothingFWHM=$OriginalSmoothingFWHM \
+	#	--confound=$Confound \
+	#	--finalsmoothingFWHM=$FinalSmoothingFWHM \
+	#	--temporalfilter=$TemporalFilter \
+	#	--regname=$RegName \
+	#	--parcellation=$Parcellation \
+	#	--parcellationfile=$ParcellationFile \
+	#	--seedROI=$seedROI
+	#fi
 	# Run Level 2 analyses by combining phase encoding directions for the same resting state ScalarExtensionList
 	if [ "$LevelTwofMRIName" != "NONE" ]
 	then
