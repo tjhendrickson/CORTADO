@@ -157,7 +157,7 @@ main() {
 
 	# copy the template file to the intended destination FSF file
 	#cp -p ${fsf_template_file} ${outdir}/${taskname}${OriginalSmoothingString}_level1.fsf
-	cp -p /home/range2-raid1/timothy/GitHub/CORTADO/modified_files/task-rest_level1.fsf ${outdir}/${taskname}${OriginalSmoothingString}_level1.fsf
+	cp -p /task-rest_level1.fsf ${outdir}/${taskname}${OriginalSmoothingString}_level1.fsf
 	echo ""
 	echo "Level 1 FSF file generated at: "
 	echo "  ${outdir}/${taskname}${OriginalSmoothingString}_level1.fsf"

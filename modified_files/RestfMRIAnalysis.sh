@@ -114,12 +114,12 @@ get_options() {
 				fMRIFolderName=${argument#*=}
 				index=$(( index + 1 ))
 				;;		
-			--lvl2task=*)
+			--lvl2fmrifilename=*)
 				LevelTwofMRIName=${argument#*=}
 				index=$(( index + 1 ))
 				;;
-			--lvl2fsf=*)
-				LevelTwofsfNames=${argument#*=}
+			--lvl2fmrifoldername=*)
+				LevelTwoFolderName=${argument#*=}
 				index=$(( index + 1 ))
 				;;
 			--lowresmesh=*)
@@ -183,7 +183,7 @@ echo "READ_ARGS: Rest Reference Image: ${BoldRef}"
 echo "READ_ARGS: fMRIFilename: ${fMRIFilename}"
 echo "READ_ARGS: fMRIFolderName: ${fMRIFolderName}"
 echo "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
-echo "READ_ARGS: LevelTwofsfName: ${LevelTwofsfName}"
+echo "READ_ARGS: LevelTwoFolderName: ${LevelTwoFolderName}"
 echo "READ_ARGS: LowResMesh: ${LowResMesh}"
 echo "READ_ARGS: GrayordinatesResolution: ${GrayordinatesResolution}"
 echo "READ_ARGS: OriginalSmoothingFWHM: ${OriginalSmoothingFWHM}"
@@ -206,46 +206,46 @@ main() {
 
 	# Run Level 1 analyses (from command line arguments)
 	echo "MAIN: RUN_LEVEL1: Running Level 1 Analysis"
-	#if [ "${fMRIFolderName}" != "NONE" ]
-	#then
-	#echo "MAIN: RUN_LEVEL1: Issuing command: /home/range2-raid1/timothy/GitHub/CORTADO/modified_files/RestfMRILevel1.sh --outdir $outdir --pipeline $Pipeline --ICAoutputs $ICAoutputs --finalfile $FinalFile --volfinalfile ${volFinalFile} --boldref ${BoldRef} --fmrifilename $fMRIFilename --fmrifoldername $fMRIFolderName --ResultsFolder $ResultsFolder --ROIsFolder $ROIsFolder --DownSampleFolder $DownSampleFolder --lowresmesh $LowResMesh --grayordinatesres $GrayordinatesResolution --origsmoothingFWHM $OriginalSmoothingFWHM --confound $Confound --finalsmoothingFWHM $FinalSmoothingFWHM --temporalfilter $TemporalFilter  --regname $RegName --parcellation $Parcellation --parcellationfile $ParcellationFile --seedROI $seedROI"
-	#/RestfMRILevel1.sh
-	#/home/range2-raid1/timothy/GitHub/CORTADO/modified_files/RestfMRILevel1.sh \
-	#--outdir=$outdir \
-	#	--pipeline=$Pipeline \
-	#	--ICAoutputs=$ICAoutputs \
-	#	--finalfile=$FinalFile \
-	#	--volfinalfile=$volFinalFile \
-	#	--boldref=${BoldRef} \
-	#	--fmrifilename=$fMRIFilename \
-	#	--fmrifoldername=$fMRIFolderName \
-	#	--ResultsFolder=$ResultsFolder \
-	#	--ROIsFolder=$ROIsFolder \
-	#	--DownSampleFolder=$DownSampleFolder \
-	#	--lowresmesh=$LowResMesh \
-	#	--grayordinatesres=$GrayordinatesResolution \
-	#	--origsmoothingFWHM=$OriginalSmoothingFWHM \
-	#	--confound=$Confound \
-	#	--finalsmoothingFWHM=$FinalSmoothingFWHM \
-	#	--temporalfilter=$TemporalFilter \
-	#	--regname=$RegName \
-	#	--parcellation=$Parcellation \
-	#	--parcellationfile=$ParcellationFile \
-	#	--seedROI=$seedROI
-	#fi
+	if [ "${seedROI}" != "NONE" ]
+	then
+	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh --outdir $outdir --pipeline $Pipeline --ICAoutputs $ICAoutputs --finalfile $FinalFile --volfinalfile ${volFinalFile} --boldref ${BoldRef} --fmrifilename $fMRIFilename --fmrifoldername $fMRIFolderName --ResultsFolder $ResultsFolder --ROIsFolder $ROIsFolder --DownSampleFolder $DownSampleFolder --lowresmesh $LowResMesh --grayordinatesres $GrayordinatesResolution --origsmoothingFWHM $OriginalSmoothingFWHM --confound $Confound --finalsmoothingFWHM $FinalSmoothingFWHM --temporalfilter $TemporalFilter  --regname $RegName --parcellation $Parcellation --parcellationfile $ParcellationFile --seedROI $seedROI"
+	/RestfMRILevel1.sh
+	--outdir=$outdir \
+		--pipeline=$Pipeline \
+		--ICAoutputs=$ICAoutputs \
+		--finalfile=$FinalFile \
+		--volfinalfile=$volFinalFile \
+		--boldref=${BoldRef} \
+		--fmrifilename=$fMRIFilename \
+		--fmrifoldername=$fMRIFolderName \
+		--ResultsFolder=$ResultsFolder \
+		--ROIsFolder=$ROIsFolder \
+		--DownSampleFolder=$DownSampleFolder \
+		--lowresmesh=$LowResMesh \
+		--grayordinatesres=$GrayordinatesResolution \
+		--origsmoothingFWHM=$OriginalSmoothingFWHM \
+		--confound=$Confound \
+		--finalsmoothingFWHM=$FinalSmoothingFWHM \
+		--temporalfilter=$TemporalFilter \
+		--regname=$RegName \
+		--parcellation=$Parcellation \
+		--parcellationfile=$ParcellationFile \
+		--seedROI=$seedROI
+	fi
+	
 	# Run Level 2 analyses by combining phase encoding directions for the same resting state ScalarExtensionList
-	if [ "$LevelTwofMRIName" != "NONE" ]
+	if [ "${seedROI}" == "NONE" ]
 	then
 		# Combine Data Across Phase Encoding Directions in the Level 2 Analysis
 		echo "MAIN: RUN_LEVEL2: Combine Data Across Phase Encoding Directions in the Level 2 Analysis"
-		echo "MAIN: RUN_LEVEL2: Issuing command: /RestfMRILevel2.sh $Subject $ResultsFolder $DownSampleFolder $LevelOnefMRINames $LevelOnefsfNames $LevelTwofMRIName $LevelTwofsfNames $LowResMesh $FinalSmoothingFWHM $TemporalFilter $RegName $Parcellation"
+		echo "MAIN: RUN_LEVEL2: Issuing command: /RestfMRILevel2.sh $Subject $ResultsFolder $DownSampleFolder $LevelOnefMRINames $LevelTwoFolderName $LevelTwofMRIName $LevelTwofsfNames $LowResMesh $FinalSmoothingFWHM $TemporalFilter $RegName $Parcellation"
 		/RestfMRILevel2.sh \
 		$Subject \
 		$ResultsFolder \
 		$outdir \
 		$DownSampleFolder \
 		$LevelOnefMRINames \
-		$LevelOnefsfNames \
+		$LevelTwoFolderName \
 		$LevelTwofMRIName \
 		$LevelTwofsfNames \
 		$LowResMesh \

@@ -156,7 +156,7 @@ main() {
 	fi
 
 	# copy the template file to the intended destination FSF file
-	cp -p ${fsf_template_file} ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level2.fsf
+	cp -p /task-rest_level2.fsf ${outdir}/${taskname}${TemporalFilterString}${OriginalSmoothingString}_level2.fsf
 
 	echo ""
 	echo "Level 2 FSF file generated at: "
