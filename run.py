@@ -65,7 +65,6 @@ def run_seed_rsfMRI_processing(**args):
         '--fmrifilename="{fmrifilename}" ' + \
         '--fmrifoldername="{fmrifoldername}" ' + \
         '--lvl2fmrifoldername="{level_2_foldername}" ' + \
-        '--lvl2fmrifilename="{level_2_fmriname}" ' + \
         '--lowresmesh="{lowresmesh:d}" ' + \
         '--grayordinatesres="{fmrires:s}" ' + \
         '--origsmoothingFWHM="{fmrires:s}" ' + \
@@ -129,10 +128,8 @@ else:
 
 # initialize level 2 variables
 if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
-    level_2_fmriname = 'NONE'
     level_2_foldername = 'NONE'
 else:
-    level_2_fmriname = 'rsfMRI_combined'
     level_2_foldername = 'rsfMRI_combined'
 
 
@@ -172,6 +169,9 @@ if ses_to_analyze:
                 bolds = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='bold',task='rest') if 'preproc' in f.filename]
             # will need bold reference images
             bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
+        # store list of fmrinames for level 2 analysis
+        if level_2_foldername == 'rsfMRI_combined':
+            fmrinames = []
         for idx,fmritcs in enumerate(bolds):
             if preprocessing_type == 'HCP':
                 vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
@@ -180,17 +180,10 @@ if ses_to_analyze:
                 shortfmriname=fmritcs.split("/")[-2]
                 AtlasFolder='/'.join(fmritcs.split("/")[0:5])
                 fmriname = os.path.basename(fmritcs).split(".")[0]
+                if level_2_foldername == 'rsfMRI_combined':
+                    fmrinames.append(fmriname)
                 assert fmriname
                 bold_ref = "NONE"
-                if level_2_fmriname == 'rsfMRI_combined':
-                    FinalSmoothingString="_s" + smoothing
-                    TemporalFilterString="_hp" + highpass
-                    if parcel_name == 'NONE':
-                        ParcellationString=""
-                    else:
-                        ParcellationString="_" + parcel_name 
-                    FEATDir=os.path.join(outdir,fMRIFilename,TemporalFilterString + FinalSmoothingString + ParcellationString + "_level1_" + seed_ROI_name + "_ROI.feat")
-
             elif preprocessing_type == 'fmriprep':
                 #reference image
                 bold_ref = bolds_ref[idx]
@@ -226,7 +219,6 @@ if ses_to_analyze:
                                                                                     fmrifilename=fmriname,
                                                                                     fmrifoldername=shortfmriname,
                                                                                     level_2_foldername=level_2_foldername,
-                                                                                    level_2_fmriname=level_2_fmriname,
                                                                                     lowresmesh=lowresmesh,
                                                                                     fmrires=fmrires,
                                                                                     smoothing=smoothing,
@@ -262,13 +254,12 @@ if ses_to_analyze:
                                                                 AtlasFolder=AtlasFolder,
                                                                 pipeline=preprocessing_type,
                                                                 ICAoutputs=ICAoutputs,
-                                                                finalfile=fmritcs,
+                                                                finalfile=fmritcs,                                         
                                                                 vol_finalfile=vol_fmritcs,
                                                                 bold_ref=bold_ref,
                                                                 fmrifilename=fmriname,
                                                                 fmrifoldername=shortfmriname,
                                                                 level_2_foldername=level_2_foldername,
-                                                                level_2_fmriname=level_2_fmriname,
                                                                 lowresmesh=lowresmesh,
                                                                 fmrires=fmrires,
                                                                 smoothing=smoothing,
@@ -308,7 +299,6 @@ if ses_to_analyze:
                                                                 fmrifilename=fmriname,
                                                                 fmrifoldername=shortfmriname,
                                                                 level_2_foldername=level_2_foldername,
-                                                                level_2_fmriname=level_2_fmriname,
                                                                 lowresmesh=lowresmesh,
                                                                 fmrires=fmrires,
                                                                 smoothing=smoothing,
@@ -320,27 +310,30 @@ if ses_to_analyze:
                 for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                     if stage in args.stages:
                         stage_func()
-    if level_2_fmriname == 'rsfMRI_combined':
-        fmriname='NONE'
-        shortfmriname='NONE'
-        seed_ROI_name='NONE'
-        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+    if level_2_foldername == 'rsfMRI_combined':
+        # convert list to string expected by RestfMRILevel2.sh
+        fmrinames = '@'.join(str(i) for i in fmrinames)
+        if len(seed_ROI_name) > 1:
+            if seed_handling == "together":
+                seed = seed_ROI_merged_string
+            else:
+                for seed in seed_ROI_name:        
+                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
                                                                 outdir=outdir,
-                                                                fmriname=level_2_fmriname,
+                                                                fmriname=level_2_foldername,
                                                                 highpass=highpass,
                                                                 fmrires=fmrires)),
                                                 ("rsfMRISeedAnalysis", partial(run_seed_rsfMRI_processing,
                                                                 outdir=outdir,
-                                                                AtlasFolder=AtlasFolder,
-                                                                pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
-                                                                finalfile=fmritcs,
-                                                                vol_finalfile=vol_fmritcs,
-                                                                bold_ref=bold_ref,
-                                                                fmrifilename=fmriname,
-                                                                fmrifoldername=shortfmriname,
-                                                                level_2_fmriname=level_2_fmriname,
-                                                                level_2_foldername=level_2_fmriname,
+                                                                AtlasFolder="NONE",
+                                                                pipeline="NONE",
+                                                                ICAoutputs="NONE",
+                                                                finalfile="NONE",
+                                                                vol_finalfile="NONE",
+                                                                bold_ref="NONE",
+                                                                fmrifilename=fmrinames,
+                                                                fmrifoldername="NONE",
+                                                                level_2_foldername=level_2_foldername,
                                                                 lowresmesh=lowresmesh,
                                                                 fmrires=fmrires,
                                                                 smoothing=smoothing,
@@ -348,7 +341,12 @@ if ses_to_analyze:
                                                                 parcel_file=parcel_file,
                                                                 parcel_name=parcel_name,
                                                                 regname=msm_all_reg_name,
-                                                                seedROI=seed_ROI_name))])
+                                                                seedROI=seed))])
+                    for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                        if stage in args.stages:
+                            stage_func()
+        elif len(seed_ROI_name) == 1:
+            seed = seed_ROI_name[0]
         
         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
             if stage in args.stages:

@@ -48,41 +48,96 @@ show_tool_versions()
 
 
 ########################################## READ COMMAND-LINE ARGUMENTS ##################################
+get_options() 
+{
+	local scriptName=$(basename ${0})
+    local arguments=($@)
+    
+    # initialize global output variables
+	unset outdir
+	unset Pipeline
+	unset ICAoutputs
+	unset fMRIFilenames
+	unset LevelTwoFolderName
+	unset FinalSmoothingFWHM
+	unset TemporalFilter
+	unset RegName
+	unset Parcellation
+	unset seedROI
 
-Subject="$1"
-ResultsFolder="$2"
-DownSampleFolder="$3"
-LevelOnefMRINames="$4"
-LevelOnefsfNames="$5"
-LevelTwofMRIName="$6"
-LevelTwofsfName="$7"
-LowResMesh="$8"
-FinalSmoothingFWHM="$9"
-TemporalFilter="${10}"
-VolumeBasedProcessing="${11}"
-RegName="${12}"
-Parcellation="${13}"
+	# parse arguments
+	echo "READ_ARGS: Parsing Command Line Options"
+    local index=0
+    local numArgs=${#arguments[@]}
+    local argument
 
-# Log how the script was launched
-g_script_name=`basename ${0}`
-echo "READ_ARGS: ${g_script_name} arguments: $@"
+	while [ ${index} -lt ${numArgs} ]; do
+		argument=${arguments[index]}
 
-# Log variables parsed from command line arguments
-echo "READ_ARGS: Subject: ${Subject}"
-echo "READ_ARGS: ResultsFolder: ${ResultsFolder}"
-echo "READ_ARGS: DownSampleFolder: ${DownSampleFolder}"
-echo "READ_ARGS: LevelOnefMRINames: ${LevelOnefMRINames}"
-echo "READ_ARGS: LevelOnefsfNames: ${LevelOnefsfNames}"
-echo "READ_ARGS: LevelTwofMRIName: ${LevelTwofMRIName}"
-echo "READ_ARGS: LevelTwofsfName: ${LevelTwofsfName}"
-echo "READ_ARGS: LowResMesh: ${LowResMesh}"
-echo "READ_ARGS: FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
-echo "READ_ARGS: TemporalFilter: ${TemporalFilter}"
-echo "READ_ARGS: VolumeBasedProcessing: ${VolumeBasedProcessing}"
-echo "READ_ARGS: RegName: ${RegName}"
-echo "READ_ARGS: Parcellation: ${Parcellation}"
+		case ${argument} in
+			--outdir=*)
+				outdir=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--pipeline=*)
+				Pipeline=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--ICAoutputs=*)
+				ICAoutputs=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--fmrifilenames=*)
+				fMRIFilenames=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--lvl2fmrifoldername=*)
+				LevelTwoFolderName=${argument#*=}
+			--finalsmoothingFWHM=*)
+				FinalSmoothingFWHM=${argument#*=}
+				index=$(( index + 1 ))
+				;;		
+			--temporalfilter=*)
+				TemporalFilter=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--regname=*)
+				RegName=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--parcellation=*)
+				Parcellation=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			--seedROI=*)
+				seedROI=${argument#*=}
+				index=$(( index + 1 ))
+				;;
+			*)
+				echo ""
+				echo "ERROR: Unrecognized Option: ${argument}"
+				echo ""
+				exit 1
+				;;
+		esac
+	done
+	# Write command-line arguments to log file
+	echo "READ_ARGS: outdir: ${outdir}"
+	echo "READ_ARGS: Pipeline: ${Pipeline}"
+	echo "READ_ARGS: Use ICAoutputs: ${ICAoutputs}"
+	echo "READ_ARGS: fMRIFilenames: ${fMRIFilenames}"
+	echo "READ_ARGS: LevelTwoFolderName: ${LevelTwoFolderName}"
+	echo "READ_ARGS: FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
+	echo "READ_ARGS: TemporalFilter: ${TemporalFilter}"
+	echo "READ_ARGS: RegName: ${RegName}"
+	echo "READ_ARGS: Parcellation: ${Parcellation}"
+	echo "READ_ARGS: seedROI: ${seedROI}"
+}
 
+main(){
+	
 # Log versions of tools used by this script
+get_options $@
 show_tool_versions
 
 ########################################## MAIN ##################################
@@ -149,14 +204,12 @@ echo "MAIN: SET_NAME_STRINGS: RegString: ${RegString}"
 ### Figure out where the Level1 .feat directories are located
 # Change '@' delimited arguments to space-delimited lists for use in for loops
 LevelOnefMRINames=`echo $LevelOnefMRINames | sed 's/@/ /g'`
-LevelOnefsfNames=`echo $LevelOnefsfNames | sed 's/@/ /g'`
 # Loop over list to make string with paths to the Level1 .feat directories
 LevelOneFEATDirSTRING=""
 NumFirstLevelFolders=0; # counter
 for LevelOnefMRIName in $LevelOnefMRINames ; do 
   NumFirstLevelFolders=$(($NumFirstLevelFolders+1));
   # get fsf name that corresponds to fMRI name
-  LevelOnefsfName=`echo $LevelOnefsfNames | cut -d " " -f $NumFirstLevelFolders`;
   LevelOneFEATDirSTRING="${LevelOneFEATDirSTRING}${ResultsFolder}/${LevelOnefMRIName}/${LevelOnefsfName}${TemporalFilterString}${SmoothingString}_level1${RegString}${ParcellationString}.feat "; # space character at end is needed to separate multiple FEATDir strings
 done
 
@@ -371,6 +424,7 @@ for Analysis in ${Analyses} ; do
 	
 	analysisCounter=$(($analysisCounter+1))
 done  # end loop: for Analysis in ${Analyses}
-
-
 echo "Complete"
+}
+
+main $@
