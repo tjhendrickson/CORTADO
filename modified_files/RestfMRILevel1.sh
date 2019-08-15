@@ -54,8 +54,7 @@ show_tool_versions()
 
 
 ########################################## READ_ARGS ##################################
-get_options() 
-{
+get_options(){
 	local scriptName=$(basename ${0})
     local arguments=($@)
     
@@ -220,9 +219,9 @@ main(){
 	# determine whether to use ICA denoised outputs or not
 	if [ "${ICAoutputs}" = 'YES' ]; then
 		if [ "${Pipeline}" = "HCP" ]; then
-			ICAString="_clean"
+			ICAString="_FIXclean"
 		elif [ "${Pipeline}" = "fmriprep" ]; then
-			ICAString=""
+			ICAString="_AROMAclean"
 		fi
 	else
 		ICAString=""
@@ -236,7 +235,7 @@ main(){
 		if [ "${Pipeline}" = "HCP" ]; then
 			Extension=".ptseries.nii"
 		elif [ "${Pipeline}" = "fmriprep" ]; then
-			Extension="_parcellated.nii.gz"
+			Extension="_parcellated_timeseries.nii.gz"
 		fi
 		echo "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
 	fi
@@ -253,9 +252,8 @@ main(){
 		ParcellationString=""
 		if [ "${Pipeline}" = "HCP" ]; then
 			Extension=".dtseries.nii"
-			echo
 		elif [ "${Pipeline}" = "fmriprep" ]; then
-			Extension="_dense.nii.gz"
+			Extension="_dense_timeseries.nii.gz"
 		echo "MAIN: DETERMINE_ANALYSES: Dense Analysis requested"
 		fi
 	fi
@@ -283,7 +281,7 @@ main(){
 	##### MAKE_DESIGNS: MAKE DESIGN FILES #####
 
 	# Create output .feat directory ($FEATDir) for this analysis
-	FEATDir="${outdir}/${fMRIFilename}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}_level1_${seedROI}_ROI.feat"
+	FEATDir="${outdir}/${fMRIFilename}${TemporalFilterString}${FinalSmoothingString}${RegString}${ParcellationString}${ICAString}_level1_seed${seedROI}.feat"
 	echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
 	if [ -e ${FEATDir} ]; then
 		rm -r ${FEATDir}

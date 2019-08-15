@@ -51,30 +51,32 @@ def run_Generatefsf_level2_processing(**args):
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
-def run_seed_rsfMRI_processing(**args):
+def run_seed_level1_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
-    cmd = '/RestfMRIAnalysis.sh ' + \
-        '--outdir="{outdir}" ' + \
-        '--AtlasFolder="{AtlasFolder}" '  + \
-        '--ICAoutputs="{ICAoutputs}" ' + \
-        '--pipeline="{pipeline}" ' + \
-        '--finalfile="{finalfile}" ' + \
-        '--volfinalfile="{vol_finalfile}" ' + \
-        '--boldref="{bold_ref}" ' + \
-        '--fmrifilename="{fmrifilename}" ' + \
-        '--fmrifoldername="{fmrifoldername}" ' + \
-        '--lvl2fmrifoldername="{level_2_foldername}" ' + \
-        '--lowresmesh="{lowresmesh:d}" ' + \
-        '--grayordinatesres="{fmrires:s}" ' + \
-        '--origsmoothingFWHM="{fmrires:s}" ' + \
-        '--confound="NONE" ' + \
-        '--finalsmoothingFWHM="{smoothing:d}" ' + \
-        '--temporalfilter="{temporal_filter}" ' + \
-        '--regname="{regname}" ' + \
-        '--parcellation="{parcel_name}" ' + \
-        '--parcellationfile="{parcel_file}" ' + \
-        '--seedROI="{seedROI}" '
+    cmd = '/RestfMRILevel1.sh ' + \
+        '--outdir={outdir} ' + \
+        '--ICAoutputs={ICAoutputs} ' + \
+        '--pipeline={pipeline} ' + \
+        '--finalfile={finalfile} ' + \
+        '--volfinalfile={vol_finalfile} ' + \
+        '--boldref={bold_ref} ' + \
+        '--fmrifilename={fmrifilename} ' + \
+        '--fmrifoldername={fmrifoldername} ' + \
+        '--lvl2fmrifoldername={level_2_foldername} ' + \
+        '--lowresmesh={lowresmesh:d} ' + \
+        '--grayordinatesres={fmrires:s} ' + \
+        '--origsmoothingFWHM={fmrires:s} ' + \
+        '--confound=NONE ' + \
+        '--DownSampleFolder={DownSampleFolder} ' + \
+        '--ResultsFolder={ResultsFolder} ' + \
+        '--ROIsFolder={ROIsFolder} ' + \
+        '--finalsmoothingFWHM={smoothing:d} ' + \
+        '--temporalfilter={temporal_filter} ' + \
+        '--regname={regname} ' + \
+        '--parcellation={parcel_name} ' + \
+        '--parcellationfile={parcel_file} ' + \
+        '--seedROI={seedROI} '
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
@@ -126,13 +128,6 @@ if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
 else:
     ICAoutputs = 'NO'
 
-# initialize level 2 variables
-if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
-    level_2_foldername = 'NONE'
-else:
-    level_2_foldername = 'rsfMRI_combined'
-
-
 # need a subject label in order to start
 if args.participant_label:
     subject_label=args.participant_label[0]
@@ -147,6 +142,11 @@ else:
 
 if ses_to_analyze:
     for ses_label in ses_to_analyze:
+        # initialize level 2 variables
+        if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
+            level_2_foldername = 'NONE'
+        else:
+            level_2_foldername = 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined'
         # set output folder path
         outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label)
         if preprocessing_type == 'HCP':
@@ -203,6 +203,10 @@ if ses_to_analyze:
                     if seed_analysis_output == 'dense':
                         parcel_file = "NONE"
                         parcel_name = "NONE"
+                    # Determine locations of necessary directories (using expected naming convention)
+                    DownSampleFolder=AtlasFolder + "/fsaverage_LR" + LowResMesh + "k"
+                    ResultsFolder=AtlasFolder+"/Results"
+                    ROIsFolder=AtlasFolder+"/ROIs"
                     rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                                 outdir=outdir,
                                                                                 fmriname=fmriname,
@@ -353,6 +357,11 @@ if ses_to_analyze:
                 stage_func()
 
 else:
+    # initialize level 2 variables
+    if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
+        level_2_foldername = 'NONE'
+    else:
+        level_2_foldername = 'sub-' + subject_label+ '_rsfMRI_combined'
     outdir=args.output_dir + "/sub-%s" % (subject_label)
     # retrieve preprocessing BIDS layout for participant specified
     if preprocessing_type == 'HCP':

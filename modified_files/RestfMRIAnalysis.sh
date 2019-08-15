@@ -1,6 +1,6 @@
  #!/bin/bash
 
-set -x
+#set -x
 
 #~ND~FORMAT~MARKDOWN~
 #~ND~START~
@@ -32,27 +32,26 @@ set -x
 
 # If any command used in this script exits with a non-zero value, this script itself exits 
 # and does not attempt any further processing.
-set -e
+#set -e
 
 ########################################## READ_ARGS ##################################
 
-
 # Parse expected arguments from command-line array
-get_options() {
-	scriptName=`basename $0`
+get_options(){
+	scriptName=`basename ${0}`
     arguments=($@)
     
     # initialize global output variables
 	unset outdir
     unset AtlasFolder
     unset Pipeline
+	unset ICAoutputs
     unset FinalFile
 	unset volFinalFile
 	unset BoldRef
 	unset fMRIFilename
 	unset fMRIFolderName
-	unset LevelTwofMRIName
-	unset LevelTwofsfNames
+	unset LevelTwoFolderName
 	unset LowResMesh
 	unset GrayordinatesResolution
 	unset OriginalSmoothingFWHM
@@ -69,7 +68,7 @@ get_options() {
     local index=0
     local numArgs=${#arguments[@]}
     local argument
-
+	
 	while [ ${index} -lt ${numArgs} ]; do
 		argument=${arguments[index]}
 
@@ -191,24 +190,23 @@ echo "READ_ARGS: ParcellationFile: ${ParcellationFile}"
 echo "READ_ARGS: seedROI: ${seedROI}"
 }
 ########################################## MAIN #########################################
-main() {
+#main() {
 	get_options $@
 	
-
-
-	# Run Level 1 analyses (from command line arguments)
-	
-	if [ "${LevelTwoFolderName}" == "NONE" ]
-	then
+	#echo "$LevelTwoFolderName"
+	#exit
 
 	# Determine locations of necessary directories (using expected naming convention)
 	DownSampleFolder="${AtlasFolder}/fsaverage_LR${LowResMesh}k"
 	ResultsFolder="${AtlasFolder}/Results"
 	ROIsFolder="${AtlasFolder}/ROIs"
+	# Run Level 1 analyses (from command line arguments)
+	
+	if [ $LevelTwoFolderName = "NONE" ]; then
 
 	echo "MAIN: RUN_LEVEL1: Running Level 1 Analysis"
-	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh --outdir $outdir --pipeline $Pipeline --ICAoutputs $ICAoutputs --finalfile $FinalFile --volfinalfile ${volFinalFile} --boldref ${BoldRef} --fmrifilename $fMRIFilename --fmrifoldername $fMRIFolderName --ResultsFolder $ResultsFolder --ROIsFolder $ROIsFolder --DownSampleFolder $DownSampleFolder --lowresmesh $LowResMesh --grayordinatesres $GrayordinatesResolution --origsmoothingFWHM $OriginalSmoothingFWHM --confound $Confound --finalsmoothingFWHM $FinalSmoothingFWHM --temporalfilter $TemporalFilter  --regname $RegName --parcellation $Parcellation --parcellationfile $ParcellationFile --seedROI $seedROI"
-	/RestfMRILevel1.sh
+	echo "MAIN: RUN_LEVEL1: Issuing command: /RestfMRILevel1.sh --outdir=$outdir --pipeline=$Pipeline --ICAoutputs=$ICAoutputs --finalfile=$FinalFile --volfinalfile=${volFinalFile} --boldref=${BoldRef} --fmrifilename=$fMRIFilename --fmrifoldername=$fMRIFolderName --ResultsFolder=$ResultsFolder --ROIsFolder=$ROIsFolder --DownSampleFolder=$DownSampleFolder --lowresmesh=$LowResMesh --grayordinatesres=$GrayordinatesResolution --origsmoothingFWHM=$OriginalSmoothingFWHM --confound=$Confound --finalsmoothingFWHM=$FinalSmoothingFWHM --temporalfilter=$TemporalFilter  --regname=$RegName --parcellation=$Parcellation --parcellationfile=$ParcellationFile --seedROI=$seedROI"
+	/RestfMRILevel1.sh \
 	--outdir=$outdir \
 		--pipeline=$Pipeline \
 		--ICAoutputs=$ICAoutputs \
@@ -233,23 +231,23 @@ main() {
 	else
 		# Combine Data Across Phase Encoding Directions in the Level 2 Analysis
 		echo "MAIN: RUN_LEVEL2: Combine Data Across Phase Encoding Directions in the Level 2 Analysis"
-		echo "MAIN: RUN_LEVEL2: Issuing command: /RestfMRILevel2.sh $Subject $ResultsFolder $DownSampleFolder $LevelOnefMRINames $LevelTwoFolderName $LevelTwofMRIName $LevelTwofsfNames $LowResMesh $FinalSmoothingFWHM $TemporalFilter $RegName $Parcellation"
+		echo "MAIN: RUN_LEVEL2: Issuing command: /RestfMRILevel2.sh --outdir=$outdir --pipeline=$Pipeline --ICAoutputs=$ICAoutputs --fmrifilenames=$LevelOnefMRINames --lvl2fmrifoldername=$LevelTwoFolderName --finalsmoothingFWHM=$FinalSmoothingFWHM --temporalfilter=$TemporalFilter --regname=$RegName --parcellation$Parcellation --seedROI=$seedROI"
 		/RestfMRILevel2.sh \
-		$outdir \
-		$ICAoutputs \
-		$LevelOnefMRINames \
-		$LevelTwoFolderName \
-		$FinalSmoothingFWHM \
-		$TemporalFilter \
-		$RegName \
-		$Parcellation \ 
-		$seedROI \
-		$Pipeline 
+		--outdir=$outdir \
+		--pipeline=$Pipeline
+		--ICAoutputs=$ICAoutputs \
+		--fmrifilenames=$LevelOnefMRINames \
+		--lvl2fmrifoldername=$LevelTwoFolderName \
+		--finalsmoothingFWHM=$FinalSmoothingFWHM \
+		--temporalfilter=$TemporalFilter \
+		--regname=$RegName \
+		--parcellation$Parcellation \ 
+		--seedROI=$seedROI \
 	fi
 
 	echo "MAIN: Completed"
-}
+#}
 
 # Invoke the main function
-main $@
+#main $@
 
