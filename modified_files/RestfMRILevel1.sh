@@ -123,16 +123,16 @@ get_options(){
 				fMRIFolderName=${argument#*=}
 				index=$(( index + 1 ))
 				;;
+			--DownSampleFolder=*)
+				DownSampleFolder=${argument#*=}
+				index=$(( index + 1 ))
+				;;
 			--ResultsFolder=*)
 				ResultsFolder=${argument#*=}
 				index=$(( index + 1 ))
 				;;
 			--ROIsFolder=*)
 				ROIsFolder=${argument#*=}
-				index=$(( index + 1 ))
-				;;
-			--DownSampleFolder=*)
-				DownSampleFolder=${argument#*=}
 				index=$(( index + 1 ))
 				;;
 			--lowresmesh=*)
