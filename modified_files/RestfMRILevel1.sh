@@ -55,7 +55,7 @@ show_tool_versions()
 
 ########################################## READ_ARGS ##################################
 get_options(){
-	local scriptName=$(basename ${0})
+local scriptName=$(basename $0)
     local arguments=($@)
     
     # initialize global output variables
@@ -281,7 +281,7 @@ main(){
 	##### MAKE_DESIGNS: MAKE DESIGN FILES #####
 
 	# Create output .feat directory ($FEATDir) for this analysis
-	FEATDir="${outdir}/${fMRIFilename}${TemporalFilterString}${FinalSmoothingString}${RegString}${ParcellationString}${ICAString}_level1_seed${seedROI}.feat"
+	FEATDir="${outdir}/${fMRIFilename}${ParcellationString}${ICAString}_level1_seed${seedROI}.feat"
 	echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
 	if [ -e ${FEATDir} ]; then
 		rm -r ${FEATDir}

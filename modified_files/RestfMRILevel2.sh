@@ -1,4 +1,3 @@
-    
 #!/bin/bash
 set -e
 
@@ -56,12 +55,11 @@ show_tool_versions()
 
 
 ########################################## READ COMMAND-LINE ARGUMENTS ##################################
-get_options() 
-{
-	local scriptName=$(basename ${0})
-    local arguments=($@)
+get_options(){
+local scriptName=$(basename $0)
+	local arguments=($@)
     
-    # initialize global output variables
+    	# initialize global output variables
 	unset outdir
 	unset Pipeline
 	unset ICAoutputs
@@ -75,9 +73,9 @@ get_options()
 
 	# parse arguments
 	echo "READ_ARGS: Parsing Command Line Options"
-    local index=0
-    local numArgs=${#arguments[@]}
-    local argument
+    	local index=0
+    	local numArgs=${#arguments[@]}
+    	local argument
 
 	while [ ${index} -lt ${numArgs} ]; do
 		argument=${arguments[index]}
@@ -159,10 +157,10 @@ main(){
 	Analyses=""; ExtensionList=""; ScalarExtensionList="";
 
 	# determine whether to use ICA denoised outputs or not
-	if [ "${ICAoutputs}" = 'YES' ]; then
-		if [ "${Pipeline}" = "HCP" ]; then
+	if [[ "${ICAoutputs}" = 'YES' ]]; then
+		if [[ "${Pipeline}" = "HCP" ]]; then
 			ICAString="_FIXclean"
-		elif [ "${Pipeline}" = "fmriprep" ]; then
+		elif [[ "${Pipeline}" = "fmriprep" ]]; then
 			ICAString="_AROMAclean"
 		fi
 	else
@@ -170,15 +168,15 @@ main(){
 	fi
 
 	# Determine whether to run Parcellated, and set strings used for filenaming
-	if [ "${Parcellation}" != "NONE" ] ; then
+	if [[ "${Parcellation}" != "NONE" ]] ; then
 		# Run Parcellated Analyses
 		runParcellated=true;
 		ParcellationString="_${Parcellation}"
-		if [ "${Pipeline}" = "HCP" ]; then
+		if [[ "${Pipeline}" = "HCP" ]]; then
 			ExtensionList="${ExtensionList}ptseries.nii "
 			ScalarExtensionList="${ScalarExtensionList}pscalar.nii "
 			Analyses="${Analyses}ParcellatedStats "; # space character at end to separate multiple analyses
-		elif [ "${Pipeline}" = "fmriprep" ]; then
+		elif [[ "${Pipeline}" = "fmriprep" ]]; then
 			ExtensionList="${ExtensionList}_parcellated_timeseries.nii.gz"
 			ScalarExtensionList="${ScalarExtensionList}_parcellated_scalar.nii.gz"
 			Analyses="${Analyses}ParcellatedStats "; # space character at end to separate multiple analyses
@@ -186,22 +184,22 @@ main(){
 		echo "MAIN: DETERMINE_ANALYSES: Parcellated Analysis requested"
 	fi
 
-	if [ "${Pipeline}" = "fmriprep" ]; then
+	if [[ "${Pipeline}" = "fmriprep" ]]; then
 		runVolume=true;
 		echo "MAIN: DETERMINE_ANALYSES: Volume Analysis requested"
 	fi
 
 
 	# Determine whether to run Dense, and set strings used for filenaming
-	if [ "${Parcellation}" = "NONE" ]; then
+	if [[ "${Parcellation}" = "NONE" ]]; then
 		# Run Dense Analyses
 		runDense=true;
 		ParcellationString=""
-		if [ "${Pipeline}" = "HCP" ]; then
+		if [[ "${Pipeline}" = "HCP" ]]; then
 			ExtensionList="${ExtensionList}dtseries.nii "
 			ScalarExtensionList="${ScalarExtensionList}dscalar.nii "
 			Analyses="${Analyses}GrayordinatesStats "; # space character at end to separate multiple analyses
-		elif [ "${Pipeline}" = "fmriprep" ]; then
+		elif [[ "${Pipeline}" = "fmriprep" ]]; then
 			ExtensionList="${ExtensionList}_dense_timeseries.nii.gz "
 			ScalarExtensionList="${ScalarExtensionList}_dense_scalar.nii.gz "
 			Analyses="${Analyses}GrayordinatesStats "; # space character at end to separate multiple analyses
@@ -210,7 +208,7 @@ main(){
 	fi
 
 	# Determine whether to run Volume, and set strings used for filenaming
-	if [ $VolumeBasedProcessing = "YES" ] ; then
+	if [[ $VolumeBasedProcessing = "YES" ]] ; then
 		runVolume=true;
 		ExtensionList="${ExtensionList}nii.gz "
 		ScalarExtensionList="${ScalarExtensionList}volume.dscalar.nii "
@@ -229,7 +227,7 @@ main(){
 	### Set smoothing and filtering string variables used for file naming
 
 	# Set variables used for different registration procedures
-	if [ "${RegName}" != "NONE" ] ; then
+	if [[ "${RegName}" != "NONE" ]] ; then
 		RegString="_${RegName}"
 	else
 		RegString=""
@@ -242,27 +240,30 @@ main(){
 
 	### Figure out where the Level1 .feat directories are located
 	# Change '@' delimited arguments to space-delimited lists for use in for loops
-	LevelOnefMRINames=`echo $LevelOnefMRINames | sed 's/@/ /g'`
+	fMRIFilenames=`echo $fMRIFilenames | sed 's/@/ /g'`
+
 	# Loop over list to make string with paths to the Level1 .feat directories
 	LevelOneFEATDirSTRING=""
 	NumFirstLevelFolders=0; # counter
-	for LevelOnefMRIName in $LevelOnefMRINames ; do 
+	for fMRIFilename in $fMRIFilenames ; do 
 	NumFirstLevelFolders=$(($NumFirstLevelFolders+1));
 	# get fsf name that corresponds to fMRI name
-	LevelOneFEATDirSTRING="${LevelOneFEATDirSTRING}${outdir}/${LevelOnefMRIName}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}_level1_seed${seedROI}.feat "; # space character at end is needed to separate multiple FEATDir strings
+	LevelOneFEATDirSTRING="${LevelOneFEATDirSTRING}${outdir}/${fMRIFilename}${ParcellationString}${ICAString}_level1_seed${seedROI}.feat "; # space character at end is needed to separate multiple FEATDir strings
 	done
+	
+	echo "Level One FEAT Dirs: ${LevelOneFEATDirSTRING}"
 
 	### Determine list of contrasts for this analysis
 	FirstFolder=`echo $LevelOneFEATDirSTRING | cut -d " " -f 1`
-	ContrastNames=`cat ${FirstFolder}/design.con | grep "ContrastName" | cut -f 2`
-	NumContrasts=`echo ${ContrastNames} | wc -w`
+	ContrastNames="seed${seedROI}"
+	NumContrasts=1
 
 
 	##### MAKE DESIGN FILES AND LEVEL2 DIRECTORY #####
 
 	# Make LevelTwoFEATDir
-	LevelTwoFEATDir="${outdir}/${LevelTwofMRIName}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}_level1_seed${seedROI}.feat"
-	if [ -e ${LevelTwoFEATDir} ] ; then
+	LevelTwoFEATDir="${outdir}/${LevelTwoFolderName}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}${ICAString}_level2_seed${seedROI}.feat"
+	if [[ -e ${LevelTwoFEATDir} ]] ; then
 	rm -r ${LevelTwoFEATDir}
 	mkdir ${LevelTwoFEATDir}
 	else
@@ -270,7 +271,7 @@ main(){
 	fi
 
 	# Edit template.fsf and place it in LevelTwoFEATDir
-	cat ${outdir}/${LevelTwofMRIName}_hp200_s4_level2.fsf | sed s/_hp200_s4/${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}/g > ${LevelTwoFEATDir}/design.fsf
+	cat ${outdir}/${LevelTwoFolderName}_hp200_s4_level2.fsf | sed s/_hp200_s4/${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}/g > ${LevelTwoFEATDir}/design.fsf
 
 	# Make additional design files required by flameo
 	echo "Make design files"
@@ -291,7 +292,7 @@ main(){
 
 		### Exit if cope files are not present in Level 1 folders
 		fileCount=$( ls ${FirstFolder}/${Analysis}/cope1.${Extension} 2>/dev/null | wc -l );
-		if [ "$fileCount" -eq 0 ]; then
+		if [[ "$fileCount" -eq 0 ]]; then
 			echo "ERROR: Missing expected cope files in ${FirstFolder}/${Analysis}"
 			echo "ERROR: Exiting $g_script_name"
 			exit 1
@@ -308,7 +309,7 @@ main(){
 		done
 
 		### convert CIFTI files to fakeNIFTI if required
-		if [ "${Analysis}" != "StandardVolumeStats" ] ; then
+		if [[ "${Analysis}" != "StandardVolumeStats" ]] ; then
 			echo "Convert CIFTI files to fakeNIFTI"
 			fakeNIFTIused="YES"
 			for CIFTI in ${LevelTwoFEATDir}/${Analysis}/*/*.${Extension} ; do
@@ -324,7 +325,7 @@ main(){
 		echo "Create dof and Mask files for input to flameo (Level 2 analysis)"
 		MERGESTRING=""
 		i=1
-		while [ "$i" -le "${NumFirstLevelFolders}" ] ; do
+		while [[ "$i" -le "${NumFirstLevelFolders}" ]] ; do
 			dof=`cat ${LevelTwoFEATDir}/${Analysis}/${i}/dof`
 			fslmaths ${LevelTwoFEATDir}/${Analysis}/${i}/res4d.nii.gz -Tstd -bin -mul $dof ${LevelTwoFEATDir}/${Analysis}/${i}/dofmask.nii.gz
 			MERGESTRING=`echo "${MERGESTRING}${LevelTwoFEATDir}/${Analysis}/${i}/dofmask.nii.gz "`
@@ -336,12 +337,12 @@ main(){
 		### Create merged cope and varcope files for input to flameo (Level 2 analysis)
 		echo "Merge COPES and VARCOPES for ${NumContrasts} Contrasts"
 		copeCounter=1
-		while [ "$copeCounter" -le "${NumContrasts}" ] ; do
+		while [[ "$copeCounter" -le "${NumContrasts}" ]] ; do
 			echo "Contrast Number: ${copeCounter}"
 			COPEMERGE=""
 			VARCOPEMERGE=""
 			i=1
-			while [ "$i" -le "${NumFirstLevelFolders}" ] ; do
+			while [[ "$i" -le "${NumFirstLevelFolders}" ]] ; do
 			COPEMERGE="${COPEMERGE}${LevelTwoFEATDir}/${Analysis}/${i}/cope${copeCounter}.nii.gz "
 			VARCOPEMERGE="${VARCOPEMERGE}${LevelTwoFEATDir}/${Analysis}/${i}/varcope${copeCounter}.nii.gz "
 			i=$(($i+1))
@@ -354,14 +355,14 @@ main(){
 		### Run 2nd level analysis using flameo
 		echo "Run flameo (Level 2 analysis) for ${NumContrasts} Contrasts"
 		copeCounter=1
-		while [ "$copeCounter" -le "${NumContrasts}" ] ; do
+		while [[ "$copeCounter" -le "${NumContrasts}" ]] ; do
 			echo "Contrast Number: ${copeCounter}"
 			echo "$( which flameo )"
 			echo "Command: flameo --cope=${Analysis}/cope${copeCounter}.nii.gz \\"
 			echo "  --vc=${Analysis}/varcope${copeCounter}.nii.gz \\"
 			echo "  --dvc=${Analysis}/dof.nii.gz \\"
 			echo "  --mask=${Analysis}/mask.nii.gz \\"
-			echo "  --ld=${Analysis}/cope${copeCounter}.feat \\"
+			echo "  --ld=${Analysis}_fixedEffects \\"
 			echo "  --dm=design.mat \\"
 			echo "  --cs=design.grp \\"
 			echo "  --tc=design.con \\"
@@ -372,7 +373,7 @@ main(){
 				--vc=${Analysis}/varcope${copeCounter}.nii.gz \
 				--dvc=${Analysis}/dof.nii.gz \
 				--mask=${Analysis}/mask.nii.gz \
-				--ld=${Analysis}/cope${copeCounter}.feat \
+				--ld=${Analysis}_fixedEffects \
 				--dm=design.mat \
 				--cs=design.grp \
 				--tc=design.con \
@@ -386,19 +387,19 @@ main(){
 		### Cleanup Temporary Files (which were copied from Level1 stats directories)
 		echo "Cleanup Temporary Files"
 		i=1
-		while [ "$i" -le "${NumFirstLevelFolders}" ] ; do
+		while [[ "$i" -le "${NumFirstLevelFolders}" ]] ; do
 			rm -r ${LevelTwoFEATDir}/${Analysis}/${i}
 			i=$(($i+1))
 		done
 
 		### Convert fakeNIFTI Files back to CIFTI (if necessary)
-		if [ "$fakeNIFTIused" = "YES" ] ; then
+		if [[ "$fakeNIFTIused" = "YES" ]] ; then
 			echo "Convert fakeNIFTI files back to CIFTI"
 			CIFTItemplate="${LevelOneFEATDir}/${Analysis}/pe1.${Extension}"
 
-			# convert flameo input files for review: ${LevelTwoFEATDir}/${Analysis}/*.nii.gz
-			# convert flameo output files for each cope: ${LevelTwoFEATDir}/${Analysis}/cope*.feat/*.nii.gz
-			for fakeNIFTI in ${LevelTwoFEATDir}/${Analysis}/*.nii.gz ${LevelTwoFEATDir}/${Analysis}/cope*.feat/*.nii.gz; do
+			# convert flameo input files for review: ${LevelTwoFEATDir}/${Analysis}_fixedEffects/*.nii.gz
+			# convert flameo output files for each cope: ${LevelTwoFEATDir}/${Analysis}_fixedEffects*.nii.gz
+			for fakeNIFTI in  ${LevelTwoFEATDir}/${Analysis}/*.nii.gz ${LevelTwoFEATDir}/${Analysis}_fixedEffects/*.nii.gz; do
 				CIFTI=$( echo $fakeNIFTI | sed -e "s|.nii.gz|.${Extension}|" );
 				${CARET7DIR}/wb_command -cifti-convert -from-nifti $fakeNIFTI $CIFTItemplate $CIFTI -reset-timepoints 1 1
 				rm $fakeNIFTI
@@ -411,19 +412,19 @@ main(){
 		zMergeSTRING=""
 		bMergeSTRING=""
 		touch ${LevelTwoFEATDir}/Contrasttemp.txt
-		[ "${Analysis}" = "StandardVolumeStats" ] && touch ${LevelTwoFEATDir}/wbtemp.txt
-		[ -e "${LevelTwoFEATDir}/Contrasts.txt" ] && rm ${LevelTwoFEATDir}/Contrasts.txt
+		[[ "${Analysis}" = "StandardVolumeStats" ]] && touch ${LevelTwoFEATDir}/wbtemp.txt
+		[[ -e "${LevelTwoFEATDir}/Contrasts.txt" ]] && rm ${LevelTwoFEATDir}/Contrasts.txt
 
 		# Loop over contrasts to identify cope and zstat files to merge into wb_view scalars
 		copeCounter=1;
-		while [ "$copeCounter" -le "${NumContrasts}" ] ; do
+		while [[ "$copeCounter" -le "${NumContrasts}" ]] ; do
 			Contrast=`echo $ContrastNames | cut -d " " -f $copeCounter`
 			# Contrasts.txt is used to store the contrast names for this analysis
 			echo ${Contrast} >> ${LevelTwoFEATDir}/Contrasts.txt
 			# Contrasttemp.txt is a temporary file used to name the maps in the CIFTI scalar file
-			echo "${LevelTwofMRIName}_level2_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}" >> ${LevelTwoFEATDir}/Contrasttemp.txt
+			echo "${LevelTwoFolderName}_level2_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}" >> ${LevelTwoFEATDir}/Contrasttemp.txt
 
-			if [ "${Analysis}" = "StandardVolumeStats" ] ; then
+			if [[ "${Analysis}_fixedEffects" = "StandardVolumeStats" ]] ; then
 
 				### Make temporary dtseries files to convert into scalar files
 				# Converting volume to dense timeseries requires a volume label file
@@ -433,24 +434,24 @@ main(){
 				rm ${LevelTwoFEATDir}/wbtemp.txt
 
 				# Convert temporary volume CIFTI timeseries files
-				${CARET7DIR}/wb_command -cifti-create-dense-timeseries ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii -volume ${LevelTwoFEATDir}/StandardVolumeStats/cope${copeCounter}.feat/zstat1.nii.gz ${LevelTwoFEATDir}/StandardVolumeStats/mask.nii.gz -timestep 1 -timestart 1
-				${CARET7DIR}/wb_command -cifti-create-dense-timeseries ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii -volume ${LevelTwoFEATDir}/StandardVolumeStats/cope${copeCounter}.feat/cope1.nii.gz ${LevelTwoFEATDir}/StandardVolumeStats/mask.nii.gz -timestep 1 -timestart 1
+				${CARET7DIR}/wb_command -cifti-create-dense-timeseries ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii -volume ${LevelTwoFEATDir}/StandardVolumeStats/zstat1.nii.gz ${LevelTwoFEATDir}/StandardVolumeStats/mask.nii.gz -timestep 1 -timestart 1
+				${CARET7DIR}/wb_command -cifti-create-dense-timeseries ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii -volume ${LevelTwoFEATDir}/StandardVolumeStats/cope1.nii.gz ${LevelTwoFEATDir}/StandardVolumeStats/mask.nii.gz -timestep 1 -timestart 1
 
 				# Convert volume CIFTI timeseries files to scalar files
-				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii ROW ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
-				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii ROW ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
+				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii ROW ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
+				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii ROW ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
 
 				# Delete the temporary volume CIFTI timeseries files
-				rm ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_{cope,zstat}_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii
+				rm ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_{cope,zstat}_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.volume.dtseries.nii
 			else
 				### Convert CIFTI dense or parcellated timeseries to scalar files
-				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${Analysis}/cope${copeCounter}.feat/zstat1.${Extension} ROW ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
-				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${Analysis}/cope${copeCounter}.feat/cope1.${Extension} ROW ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
+				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${Analysis}_fixedEffects/zstat1.${Extension} ROW ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
+				${CARET7DIR}/wb_command -cifti-convert-to-scalar ${LevelTwoFEATDir}/${Analysis}_fixedEffects/cope1.${Extension} ROW ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} -name-file ${LevelTwoFEATDir}/Contrasttemp.txt
 			fi
 
 			# These merge strings are used below to combine the multiple scalar files into a single file for visualization
-			zMergeSTRING="${zMergeSTRING}-cifti ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} "
-			bMergeSTRING="${bMergeSTRING}-cifti ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} "
+			zMergeSTRING="${zMergeSTRING}-cifti ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_zstat_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} "
+			bMergeSTRING="${bMergeSTRING}-cifti ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_cope_${Contrast}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} "
 
 			# Remove Contrasttemp.txt file
 			rm ${LevelTwoFEATDir}/Contrasttemp.txt
@@ -458,8 +459,8 @@ main(){
 		done
 
 		# Perform the merge into viewable scalar files
-		${CARET7DIR}/wb_command -cifti-merge ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_zstat${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} ${zMergeSTRING}
-		${CARET7DIR}/wb_command -cifti-merge ${LevelTwoFEATDir}/${LevelTwofMRIName}_level2_cope${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} ${bMergeSTRING}
+		${CARET7DIR}/wb_command -cifti-merge ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_zstat${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} ${zMergeSTRING}
+		${CARET7DIR}/wb_command -cifti-merge ${LevelTwoFEATDir}/${LevelTwoFolderName}_level2_cope${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}.${ScalarExtension} ${bMergeSTRING}
 		
 		analysisCounter=$(($analysisCounter+1))
 	done  # end loop: for Analysis in ${Analyses}

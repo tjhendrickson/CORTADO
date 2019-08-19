@@ -138,8 +138,8 @@ get_options() {
 main() {
     get_options $@
     
-    TemporalFilterString="_hp${temporalfilter}"
-    OriginalSmoothingString="_s${originalsmoothing}"
+    TemporalFilterString="_hp200"
+    OriginalSmoothingString="_s4"
 
 	
 	echo ""

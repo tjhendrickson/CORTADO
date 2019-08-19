@@ -75,7 +75,7 @@ def run_seed_level1_rsfMRI_processing(**args):
         '--regname={regname} ' + \
         '--parcellation={parcel_name} ' + \
         '--parcellationfile={parcel_file} ' + \
-        '--seedROI={seedROI} '
+        '--seedROI={seedROI}'
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
@@ -92,7 +92,7 @@ def run_seed_level2_rsfMRI_processing(**args):
         '--temporalfilter={temporal_filter} ' + \
         '--regname={regname} ' + \
         '--parcellation={parcel_name} ' + \
-        '--seedROI={seedROI} '
+        '--seedROI={seedROI}'
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
@@ -123,6 +123,12 @@ parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do y
                                         choices=['together', 'separate'],
                                         default='separate')
 parser.add_argument('--seed_analysis_output',help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',choices = ['dense','parcellated'], default = 'dense')
+parser.add_argument('--motion_confounds',help='What type of motion confounds to use, if any. Choices are "Movement_Regressors" (motion rotation angles and translations in mm), '
+                                        ' "Movement_Regressors_dt" (detrended motion rotation angles and translations in mm), "Movement_Regressors_demean" (demeaned motion rotation angles and translations in mm) "Movement_RelativeRMS" (RMS intensity difference of volume N to the reference volume), '
+                                        ' "Movement_RelativeRMS_mean" (square of RMS intensity difference of volume N to the reference volume), "Movement_AbsoluteRMS" (absolute RMS intensity difference of volume N to the reference volume, '
+                                        ' "Movement_AbsoluteRMS_mean" (square of absolute RMS intensity difference of volume N to the reference volume), "dvars" ( RMS intensity difference of volume N to volume N+1 (see Power et al, NeuroImage, 59(3), 2012)), '
+                                        ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))', 
+                                        choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 args = parser.parse_args()
 
 # global variables
@@ -137,6 +143,21 @@ seed_handling = args.seed_handling
 seed_analysis_output = args.seed_analysis_output
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 preprocessing_type = args.preprocessing_type
+motion_confounds = args.motion_confounds
+
+if preprocessing_type == 'HCP' and motion_confounds != 'NONE':
+    motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
+    'Movement_Regressors_dt': 'Movement_Regressors_dt.txt',
+    'Movement_Regressors_demean': 'Movement_Regressors_demean.txt',
+    'Movement_RelativeRMS': 'Movement_RelativeRMS.txt',
+    'Movement_RelativeRMS_mean': 'Movement_RelativeRMS_mean.txt',
+    'Movement_AbsoluteRMS': 'Movement_AbsoluteRMS.txt',
+    'Movement_AbsoluteRMS_mean': 'Movement_AbsoluteRMS_mean.txt',
+    'dvars': 'Movement_dvars.txt',
+    'fd': 'Movement_fd.txt'}
+    motion_confounds_file = motion_confounds_dict[motion_confounds]
+elif preprocessing_type == 'fmriprep' and motion_confounds != 'NONE':
+    pass
 
  # use ICA outputs
 if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
@@ -194,6 +215,14 @@ if ses_to_analyze:
                 zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
                 fmrires = str(int(min(zooms[:3])))
                 shortfmriname=fmritcs.split("/")[-2]
+                if motion_confounds_file == 'Movement_dvars.txt':
+                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
+                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --dvars")
+                elif motion_confounds_file == 'Movement_fd.txt':
+                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
+                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --fd")
                 AtlasFolder='/'.join(fmritcs.split("/")[0:5])
                 # Determine locations of necessary directories (using expected naming convention)
                 DownSampleFolder=AtlasFolder + "/fsaverage_LR" + str(lowresmesh) + "k"
@@ -415,6 +444,14 @@ else:
             zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
             fmrires = str(float(min(zooms[:3])))
             shortfmriname=fmritcs.split("/")[-2]
+            if motion_confounds_file == 'Movement_dvars.txt':
+                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
+                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --dvars")
+            elif motion_confounds_file == 'Movement_fd.txt':
+                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
+                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --fd")
             fmriname = fmritcs.path.basename.split(".")[0]
             assert fmriname
             bold_ref = "NONE"

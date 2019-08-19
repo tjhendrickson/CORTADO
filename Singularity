@@ -6,9 +6,9 @@ From: ubuntu:trusty-20170119
 
 run.py /run.py
 modified_files/generate_level1_fsf.sh /generate_level1_fsf.sh
-modified_files/RestfMRIAnalysis.sh /RestfMRIAnalysis.sh
+modified_files/generate_level2_fsf.sh /generate_level2_fsf.sh
 modified_files/RestfMRILevel1.sh /RestfMRILevel1.sh
-modified_files/RestfMRILevel1.sh /RestfMRILevel2.sh
+modified_files/RestfMRILevel2.sh /RestfMRILevel2.sh
 modified_files/rsfMRI_seed.py /rsfMRI_seed.py
 modified_files/task-rest_level1.fsf /task-rest_level1.fsf
 modified_files/task-rest_level2.fsf /task-rest_level2.fsf
@@ -90,7 +90,7 @@ apt-get update
 apt-get install -y --force-yes libstdc++6 nano
 
 # Make scripts executable
-chmod +x /run.py /rsfMRI_seed.py /generate_level1_fsf.sh /RestfMRIAnalysis.sh /RestfMRILevel1.sh /task-rest_level1.fsf
+chmod +x /run.py /rsfMRI_seed.py /generate_level1_fsf.sh /generate_level2_fsf.sh /RestfMRILevel1.sh /RestfMRILevel2.sh /task-rest_level1.fsf /task-rest_level2.fsf
 
 %runscript
 
