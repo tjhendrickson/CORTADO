@@ -211,18 +211,27 @@ if ses_to_analyze:
             fmrinames = []
         for idx,fmritcs in enumerate(bolds):
             if preprocessing_type == 'HCP':
-                vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                if ICAoutputs == 'YES':
+                    vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                else:
+                    vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
                 zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
                 fmrires = str(int(min(zooms[:3])))
                 shortfmriname=fmritcs.split("/")[-2]
+                # create confounds if dvars or fd selected
                 if motion_confounds_file == 'Movement_dvars.txt':
-                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
-                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --dvars")
+                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
+                                    " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --dvars")
                 elif motion_confounds_file == 'Movement_fd.txt':
-                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
-                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --fd")
+                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
+                                    " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --fd")
+                # create full path to confounds file if not 'NONE'
+                if motion_confounds_file != 'NONE' and ICAoutputs == 'YES':
+                    motion_confounds_file = fmritcs.replace('%s_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','%s' %(shortfmriname,motion_confounds_file))
+                elif motion_confounds_file != 'NONE' and ICAoutputs == 'NO':
+                    motion_confounds_file = fmritcs.replace('%s_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','%s' %(shortfmriname,motion_confounds_file))
                 AtlasFolder='/'.join(fmritcs.split("/")[0:5])
                 # Determine locations of necessary directories (using expected naming convention)
                 DownSampleFolder=AtlasFolder + "/fsaverage_LR" + str(lowresmesh) + "k"

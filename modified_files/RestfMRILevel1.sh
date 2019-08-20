@@ -345,7 +345,7 @@ main(){
 	# Determine if there is a confound matrix text file (e.g., output of fsl_motion_outliers)
 	confound_matrix="";
 	if [ "$Confound" != "NONE" ]; then
-		confound_matrix=$( ls -d ${ResultsFolder}/${fMRIFolderName}/${Confound} 2>/dev/null )
+		confound_matrix=$( ls -d ${Confound} 2>/dev/null )
 	fi
 
 	# Run feat_model inside $FEATDir
