@@ -20,9 +20,9 @@ def write_regressor(output_dir,cifti_file, parcel_file, seed_ROI_name, regressor
     read_parcel_file = cifti.read(parcel_file)
     parcel_file_label_tuple = read_parcel_file[1][0][0][1]
     parcel_labels = []
-    for idx, value in enumerate(parcel_file_label_tuple):
-            if not '???' in parcel_file_label_tuple[idx][0]:
-                    parcel_labels.append(parcel_file_label_tuple[idx][0])
+    for value in parcel_file_label_tuple:
+            if not '???' in parcel_file_label_tuple[value][0]:
+                    parcel_labels.append(parcel_file_label_tuple[value][0])
     try:
         cifti_load = nibabel.cifti2.cifti2.load(cifti_file)
     except IOError:

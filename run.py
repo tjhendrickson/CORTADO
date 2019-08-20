@@ -69,7 +69,7 @@ def run_seed_level1_rsfMRI_processing(**args):
         '--lowresmesh={lowresmesh:d} ' + \
         '--grayordinatesres={fmrires:s} ' + \
         '--origsmoothingFWHM={fmrires:s} ' + \
-        '--confound=NONE ' + \
+        '--confound={confound} ' + \
         '--finalsmoothingFWHM={smoothing:d} ' + \
         '--temporalfilter={temporal_filter} ' + \
         '--regname={regname} ' + \
@@ -155,7 +155,7 @@ if preprocessing_type == 'HCP' and motion_confounds != 'NONE':
     'Movement_AbsoluteRMS_mean': 'Movement_AbsoluteRMS_mean.txt',
     'dvars': 'Movement_dvars.txt',
     'fd': 'Movement_fd.txt'}
-    motion_confounds_file = motion_confounds_dict[motion_confounds]
+    motion_confounds_filename = motion_confounds_dict[motion_confounds]
 elif preprocessing_type == 'fmriprep' and motion_confounds != 'NONE':
     pass
 
@@ -219,19 +219,19 @@ if ses_to_analyze:
                 fmrires = str(int(min(zooms[:3])))
                 shortfmriname=fmritcs.split("/")[-2]
                 # create confounds if dvars or fd selected
-                if motion_confounds_file == 'Movement_dvars.txt':
+                if motion_confounds_filename == 'Movement_dvars.txt':
                     os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
                                     " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --dvars")
-                elif motion_confounds_file == 'Movement_fd.txt':
+                                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --dvars")
+                elif motion_confounds_filename == 'Movement_fd.txt':
                     os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
                                     " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --fd")
+                                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --fd")
                 # create full path to confounds file if not 'NONE'
-                if motion_confounds_file != 'NONE' and ICAoutputs == 'YES':
-                    motion_confounds_file = fmritcs.replace('%s_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','%s' %(shortfmriname,motion_confounds_file))
-                elif motion_confounds_file != 'NONE' and ICAoutputs == 'NO':
-                    motion_confounds_file = fmritcs.replace('%s_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','%s' %(shortfmriname,motion_confounds_file))
+                if motion_confounds_filename != 'NONE' and ICAoutputs == 'YES':
+                    motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii',motion_confounds_filename)
+                elif motion_confounds_filename != 'NONE' and ICAoutputs == 'NO':
+                    motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii',motion_confounds_filename)
                 AtlasFolder='/'.join(fmritcs.split("/")[0:5])
                 # Determine locations of necessary directories (using expected naming convention)
                 DownSampleFolder=AtlasFolder + "/fsaverage_LR" + str(lowresmesh) + "k"
@@ -279,6 +279,7 @@ if ses_to_analyze:
                                                                                     ResultsFolder=ResultsFolder,
                                                                                     ROIsFolder=ROIsFolder,
                                                                                     lowresmesh=lowresmesh,
+                                                                                    confound=motion_confounds_filepath,
                                                                                     fmrires=fmrires,
                                                                                     smoothing=smoothing,
                                                                                     temporal_filter=highpass,
@@ -315,7 +316,8 @@ if ses_to_analyze:
                                                                 ROIsFolder=ROIsFolder,
                                                                 pipeline=preprocessing_type,
                                                                 ICAoutputs=ICAoutputs,
-                                                                finalfile=fmritcs,                                         
+                                                                finalfile=fmritcs,    
+                                                                confound=motion_confounds_filepath,                                     
                                                                 vol_finalfile=vol_fmritcs,
                                                                 bold_ref=bold_ref,
                                                                 fmrifilename=fmriname,
@@ -357,6 +359,7 @@ if ses_to_analyze:
                                                                 ICAoutputs=ICAoutputs,
                                                                 finalfile=fmritcs,
                                                                 vol_finalfile=vol_fmritcs,
+                                                                confound=motion_confounds_filepath,
                                                                 bold_ref=bold_ref,
                                                                 fmrifilename=fmriname,
                                                                 fmrifoldername=shortfmriname,
@@ -449,18 +452,29 @@ else:
         bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
     for idx,fmritcs in enumerate(bolds):
         if preprocessing_type == 'HCP':
-            vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','.nii.gz')
+            if ICAoutputs == 'YES':
+                vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+            else:
+                vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
+            
             zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
-            fmrires = str(float(min(zooms[:3])))
+            fmrires = str(int(min(zooms[:3])))
             shortfmriname=fmritcs.split("/")[-2]
-            if motion_confounds_file == 'Movement_dvars.txt':
-                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
-                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --dvars")
-            elif motion_confounds_file == 'Movement_fd.txt':
-                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " vol_fmritcs + \
-                                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_file + " --fd")
+            # create confounds if dvars or fd selected
+            if motion_confounds_filename == 'Movement_dvars.txt':
+                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
+                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --dvars")
+            elif motion_confounds_filename == 'Movement_fd.txt':
+                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
+                            " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --fd")
+            # create full path to confounds file if not 'NONE'
+            if motion_confounds_filename != 'NONE' and ICAoutputs == 'YES':
+                motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii',motion_confounds_filename)
+            elif motion_confounds_filename != 'NONE' and ICAoutputs == 'NO':
+                motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii',motion_confounds_filename)
+            AtlasFolder='/'.join(fmritcs.split("/")[0:4])
             fmriname = fmritcs.path.basename.split(".")[0]
             assert fmriname
             bold_ref = "NONE"
@@ -502,6 +516,7 @@ else:
                                                                         fmrires=fmrires,
                                                                         smoothing=smoothing,
                                                                         temporal_filter=highpass,
+                                                                        confound=motion_confounds_filepath,
                                                                         parcel_file=parcel_file,
                                                                         parcel_name=parcel_name,
                                                                         regname=msm_all_reg_name,
@@ -542,6 +557,7 @@ else:
                                                                     lowresmesh=lowresmesh,
                                                                     fmrires=fmrires,
                                                                     smoothing=smoothing,
+                                                                    confound=motion_confounds_filepath,
                                                                     temporal_filter=highpass,
                                                                     parcel_file=parcel_file,
                                                                     parcel_name=parcel_name,
@@ -578,6 +594,7 @@ else:
                                                                     lowresmesh=lowresmesh,
                                                                     fmrires=fmrires,
                                                                     smoothing=smoothing,
+                                                                    confound=motion_confounds_filepath,
                                                                     temporal_filter=highpass,
                                                                     parcel_file=parcel_file,
                                                                     parcel_name=parcel_name,
