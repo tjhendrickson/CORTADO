@@ -47,7 +47,7 @@ touch /parcel_dlabel.nii
 
 # Install basic utilities
 apt-get -qq update
-apt-get install -yq --no-install-recommends libglib2.0-0 python wget bc bzip2 ca-certificates libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libgl1-mesa-dev libfreetype6 libfreetype6-dev
+apt-get install -yq --no-install-recommends libquadmath0 libglib2.0-0 python wget bc bzip2 ca-certificates libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libgl1-mesa-dev libfreetype6 libfreetype6-dev
 
 
 # Install anaconda2 and needed python tools
@@ -87,8 +87,6 @@ wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
 export FSLDIR=/usr/local/fsl
 . ${FSLDIR}/etc/fslconf/fsl.sh
 export PATH=${FSLDIR}/bin:${PATH}
-apt-get update
-apt-get install libquadmath0
 
 
 # Make scripts executable
