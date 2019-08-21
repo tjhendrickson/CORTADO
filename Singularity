@@ -15,7 +15,7 @@ modified_files/task-rest_level2.fsf /task-rest_level2.fsf
 
 
 %environment
-
+export LC_ALL=C
 export CARET7DIR=/opt/workbench/bin_rh_linux64
 export OS=Linux
 export FS_OVERRIDE=0
@@ -50,16 +50,6 @@ apt-get -qq update
 apt-get install -yq --no-install-recommends libglib2.0-0 python wget bc bzip2 ca-certificates libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libgl1-mesa-dev libfreetype6 libfreetype6-dev
 
 
-# Install FSL 6.0.1
-apt-get update
-cd /tmp
-wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
-python fslinstaller.py -d /usr/local/fsl -E -V 6.0.1 -q -D
-export FSLDIR=/usr/local/fsl
-. ${FSLDIR}/etc/fslconf/fsl.sh
-export PATH=${FSLDIR}/bin:${PATH}
-${FSLDIR}/etc/fslconf/fslpython_install.sh
-
 # Install anaconda2 and needed python tools
 cd /opt
 wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
@@ -88,6 +78,16 @@ export PATH=/opt/workbench/bin_rh_linux64:${PATH}
 echo "deb http://ftp.de.debian.org/debian stretch main" >> /etc/apt/sources.list
 apt-get update
 apt-get install -y --force-yes libstdc++6 nano
+
+# Install FSL 6.0.1
+apt-get update
+cd /opt
+wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
+/usr/bin/python fslinstaller.py -d /usr/local/fsl -E -V 6.0.1 -q -D
+export FSLDIR=/usr/local/fsl
+. ${FSLDIR}/etc/fslconf/fsl.sh
+export PATH=${FSLDIR}/bin:${PATH}
+
 
 # Make scripts executable
 chmod +x /run.py /rsfMRI_seed.py /generate_level1_fsf.sh /generate_level2_fsf.sh /RestfMRILevel1.sh /RestfMRILevel2.sh /task-rest_level1.fsf /task-rest_level2.fsf
