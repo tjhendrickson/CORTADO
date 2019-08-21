@@ -145,17 +145,20 @@ msm_all_reg_name = "MSMAll_2_d40_WRN"
 preprocessing_type = args.preprocessing_type
 motion_confounds = args.motion_confounds
 
-if preprocessing_type == 'HCP' and motion_confounds != 'NONE':
-    motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
-    'Movement_Regressors_dt': 'Movement_Regressors_dt.txt',
-    'Movement_Regressors_demean': 'Movement_Regressors_demean.txt',
-    'Movement_RelativeRMS': 'Movement_RelativeRMS.txt',
-    'Movement_RelativeRMS_mean': 'Movement_RelativeRMS_mean.txt',
-    'Movement_AbsoluteRMS': 'Movement_AbsoluteRMS.txt',
-    'Movement_AbsoluteRMS_mean': 'Movement_AbsoluteRMS_mean.txt',
-    'dvars': 'Movement_dvars.txt',
-    'fd': 'Movement_fd.txt'}
-    motion_confounds_filename = motion_confounds_dict[motion_confounds]
+if preprocessing_type == 'HCP':
+    if motion_confounds != 'NONE':
+        motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
+        'Movement_Regressors_dt': 'Movement_Regressors_dt.txt',
+        'Movement_Regressors_demean': 'Movement_Regressors_demean.txt',
+        'Movement_RelativeRMS': 'Movement_RelativeRMS.txt',
+        'Movement_RelativeRMS_mean': 'Movement_RelativeRMS_mean.txt',
+        'Movement_AbsoluteRMS': 'Movement_AbsoluteRMS.txt',
+        'Movement_AbsoluteRMS_mean': 'Movement_AbsoluteRMS_mean.txt',
+        'dvars': 'Movement_dvars.txt',
+        'fd': 'Movement_fd.txt'}
+        motion_confounds_filename = motion_confounds_dict[motion_confounds]
+    else:
+        motion_confounds_filename = 'NONE'
 elif preprocessing_type == 'fmriprep' and motion_confounds != 'NONE':
     pass
 

@@ -88,8 +88,7 @@ export FSLDIR=/usr/local/fsl
 . ${FSLDIR}/etc/fslconf/fsl.sh
 export PATH=${FSLDIR}/bin:${PATH}
 apt-get update
-apt-get install libopenblas-base libquadmath0
-
+apt-get install libquadmath0
 
 
 # Make scripts executable
