@@ -29,7 +29,7 @@ export FSLOUTPUTTYPE=NIFTI_GZ
 export PATH=/usr/lib/fsl/5.0:$PATH
 export FSLMULTIFILEQUIT=TRUE
 export POSSUMDIR=/usr/share/fsl/5.0
-export LD_LIBRARY_PATH=/usr/lib/fsl/5.0
+export LD_LIBRARY_PATH=/usr/local/fsl/lib:${LD_LIBRARY_PATH}
 export FSLTCLSH=/usr/bin/tclsh
 export FSLWISH=/usr/bin/wish
 export FSLOUTPUTTYPE=NIFTI_GZ
@@ -79,7 +79,7 @@ echo "deb http://ftp.de.debian.org/debian stretch main" >> /etc/apt/sources.list
 apt-get update
 apt-get install -y --force-yes libstdc++6 nano
 
-# Install FSL 6.0.1
+# Install FSL 6.0.1 along with ubuntu dependencies
 apt-get update
 cd /opt
 wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
@@ -87,6 +87,9 @@ wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
 export FSLDIR=/usr/local/fsl
 . ${FSLDIR}/etc/fslconf/fsl.sh
 export PATH=${FSLDIR}/bin:${PATH}
+apt-get update
+apt-get install libopenblas-base libquadmath0
+
 
 
 # Make scripts executable
