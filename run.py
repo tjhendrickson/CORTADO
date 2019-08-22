@@ -146,7 +146,7 @@ preprocessing_type = args.preprocessing_type
 motion_confounds = args.motion_confounds
 
 if preprocessing_type == 'HCP':
-    if motion_confounds != 'NONE':
+    if not motion_confounds == 'NONE':
         motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
         'Movement_Regressors_dt': 'Movement_Regressors_dt.txt',
         'Movement_Regressors_demean': 'Movement_Regressors_demean.txt',
