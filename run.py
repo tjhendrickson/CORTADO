@@ -159,6 +159,7 @@ if preprocessing_type == 'HCP':
         motion_confounds_filename = motion_confounds_dict[motion_confounds]
     else:
         motion_confounds_filename = 'NONE'
+        motion_confounds_filepath = 'NONE'
 elif preprocessing_type == 'fmriprep' and motion_confounds != 'NONE':
     pass
 
