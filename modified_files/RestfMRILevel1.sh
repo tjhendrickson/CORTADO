@@ -21,11 +21,11 @@
 #
 # This script runs Level 1 Resting State Seed fMRI Analysis.
 #
-# <!-- References -->                                                                                                             
+# <!-- References -->
 # [HCP]: http://www.humanconnectome.org
 # [FSL]: http://fsl.fmrib.ox.ac.uk
 #
-#~ND~END~   
+#~ND~END~
 
 
 set -e
@@ -34,10 +34,10 @@ set -x
 
 # Requirements for this script
 #  installed versions of FSL 6.0.1
-#  environment: FSLDIR, CARET7DIR 
+#  environment: FSLDIR, CARET7DIR
 
 
-########################################## PREPARE FUNCTIONS ########################################## 
+########################################## PREPARE FUNCTIONS ##########################################
 
 export PATH=/usr/local/fsl/bin:${PATH}
 
@@ -57,7 +57,7 @@ show_tool_versions()
 get_options(){
 local scriptName=$(basename $0)
     local arguments=($@)
-    
+
     # initialize global output variables
 	unset outdir
     unset AtlasFolder
@@ -154,7 +154,7 @@ local scriptName=$(basename $0)
 			--finalsmoothingFWHM=*)
 				FinalSmoothingFWHM=${argument#*=}
 				index=$(( index + 1 ))
-				;;		
+				;;
 			--temporalfilter=*)
 				TemporalFilter=${argument#*=}
 				index=$(( index + 1 ))
@@ -249,6 +249,8 @@ main(){
 	if [ "${Parcellation}" = "NONE" ]; then
 		# Run Dense Analyses
 		runDense=true;
+		# need subject variable to find midthickness surfaces for smoothing later on
+		Subject=`basename ${outdir}`
 		ParcellationString=""
 		if [ "${Pipeline}" = "HCP" ]; then
 			Extension=".dtseries.nii"
@@ -262,7 +264,7 @@ main(){
 	OriginalSmoothingString="_s${OriginalSmoothingFWHM}"
 	FinalSmoothingString="_s${FinalSmoothingFWHM}"
 	TemporalFilterString="_hp${TemporalFilter}"
-	
+
 	# Set variables used for different registration procedures
 	if [ "${RegName}" != "NONE" ]; then
 		RegString="_${RegName}"
@@ -369,7 +371,7 @@ main(){
 
 	### Parcellate data if a Parcellation was provided
 	# Parcellation may be better than adding spatial smoothing to dense time series.
-	# Parcellation increases sensitivity and statistical power, but avoids blurring signal 
+	# Parcellation increases sensitivity and statistical power, but avoids blurring signal
 	# across region boundaries into adjacent, non-activated regions.
 	echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Parcellate data if a Parcellation was provided"
 	if $runParcellated; then
@@ -419,16 +421,16 @@ main(){
 
 		#Add volume dilation
 		#
-		# For some subjects, FreeSurfer-derived brain masks (applied to the time 
-		# series data in IntensityNormalization.sh as part of 
+		# For some subjects, FreeSurfer-derived brain masks (applied to the time
+		# series data in IntensityNormalization.sh as part of
 		# GenericfMRIVolumeProcessingPipeline.sh) do not extend to the edge of brain
 		# in the MNI152 space template. This is due to the limitations of volume-based
 		# registration. So, to avoid a lack of coverage in a group analysis around the
 		# penumbra of cortex, we will add a single dilation step to the input prior to
 		# creating the Level1 maps.
 		#
-		# Ideally, we would condition this dilation on the resolution of the fMRI 
-		# data.  Empirically, a single round of dilation gives very good group 
+		# Ideally, we would condition this dilation on the resolution of the fMRI
+		# data.  Empirically, a single round of dilation gives very good group
 		# coverage of MNI brain for the 2 mm resolution of HCP fMRI data. So a single
 		# dilation is what we use below.
 		#
@@ -447,9 +449,9 @@ main(){
 		#    that desire the original ("tight") FreeSurfer-defined brain mask (which is
 		#    implicitly represented as the non-zero voxels in the InputSBRef volume) can
 		#    mask back to that if they chose, with NO impact on the voxel-wise results.
-		# 2) A simpler possible approach of just dilating the result of step (a) results in 
+		# 2) A simpler possible approach of just dilating the result of step (a) results in
 		#    an unnatural pattern of dark/light/dark intensities at the edge of brain,
-		#    whereas the combination of steps (b) and (c) yields a more natural looking 
+		#    whereas the combination of steps (b) and (c) yields a more natural looking
 		#    transition of intensities in the added voxels.
 		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_NIFTI: Add volume dilation"
 
@@ -489,17 +491,17 @@ main(){
 		film_gls --rn=${FEATDir}/SubcorticalVolumeStats --sa --ms=5 --in=${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.nii.gz --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --thr=1 --mode=volumetric
 		rm ${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.nii.gz
 
-		#Run film_gls on cortical surface data 
+		#Run film_gls on cortical surface data
 		echo "MAIN: RUN_GLM: Run film_gls on cortical surface data"
 		for Hemisphere in L R ; do
-			#Prepare for film_gls  
+			#Prepare for film_gls
 			echo "MAIN: RUN_GLM: Prepare for film_gls"
 			${CARET7DIR}/wb_command -metric-dilate ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${DownSampleFolder}/.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii 50 ${FEATDir}/${fMRIFolder}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii -nearest
 
 			#Run film_gls on surface data
 			echo "MAIN: RUN_GLM: Run film_gls on surface data"
 			film_gls --rn=${FEATDir}/${Hemisphere}_SurfaceStats --sa --ms=15 --epith=5 --in2=${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii --in=${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAstring}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --mode=surface
-			rm ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAstring}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAstring}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii	
+			rm ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAstring}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAstring}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii
 		done
 
 		# Merge Cortical Surface and Subcortical Volume into Grayordinates
