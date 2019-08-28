@@ -501,7 +501,7 @@ main(){
 			#Run film_gls on surface data
 			echo "MAIN: RUN_GLM: Run film_gls on surface data"
 			film_gls --rn=${FEATDir}/${Hemisphere}_SurfaceStats --sa --ms=15 --epith=5 --in2=${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii --in=${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --mode=surface
-			rm ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAstring}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii
+			rm ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii
 		done
 
 		# Merge Cortical Surface and Subcortical Volume into Grayordinates
