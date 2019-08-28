@@ -127,13 +127,13 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         ' "Movement_Regressors_dt" (detrended motion rotation angles and translations in mm), "Movement_Regressors_demean" (demeaned motion rotation angles and translations in mm) "Movement_RelativeRMS" (RMS intensity difference of volume N to the reference volume), '
                                         ' "Movement_RelativeRMS_mean" (square of RMS intensity difference of volume N to the reference volume), "Movement_AbsoluteRMS" (absolute RMS intensity difference of volume N to the reference volume, '
                                         ' "Movement_AbsoluteRMS_mean" (square of absolute RMS intensity difference of volume N to the reference volume), "dvars" ( RMS intensity difference of volume N to volume N+1 (see Power et al, NeuroImage, 59(3), 2012)), '
-                                        ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))', 
+                                        ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))',
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 args = parser.parse_args()
 
 # global variables
 highpass = "2000"
-lowresmesh = 32   
+lowresmesh = 32
 highresmesh = 164
 smoothing = args.smoothing
 parcel_file = args.parcellation_file
@@ -193,7 +193,7 @@ if ses_to_analyze:
         if preprocessing_type == 'HCP':
             # use ICA outputs
             if ICAoutputs == 'YES':
-                
+
                 bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,type='clean',
                 extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
             # do not use ICA outputs
@@ -263,9 +263,35 @@ if ses_to_analyze:
                     if not regressor_file:
                         raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                     if seed_analysis_output == 'dense':
-                        parcel_file = "NONE"
-                        parcel_name = "NONE"
-                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                                outdir=outdir,
+                                                                                fmriname=fmriname,
+                                                                                highpass=highpass,
+                                                                                fmrires=fmrires)),
+                                                    ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                                    outdir=outdir,
+                                                                                    pipeline=preprocessing_type,
+                                                                                    ICAoutputs=ICAoutputs,
+                                                                                    finalfile=fmritcs,
+                                                                                    vol_finalfile=vol_fmritcs,
+                                                                                    bold_ref=bold_ref,
+                                                                                    fmrifilename=fmriname,
+                                                                                    fmrifoldername=shortfmriname,
+                                                                                    DownSampleFolder=DownSampleFolder,
+                                                                                    ResultsFolder=ResultsFolder,
+                                                                                    ROIsFolder=ROIsFolder,
+                                                                                    lowresmesh=lowresmesh,
+                                                                                    confound=motion_confounds_filepath,
+                                                                                    fmrires=fmrires,
+                                                                                    smoothing=smoothing,
+                                                                                    temporal_filter=highpass,
+                                                                                    parcel_file="NONE",
+                                                                                    parcel_name="NONE",
+                                                                                    regname=msm_all_reg_name,
+                                                                                    seedROI=seed_ROI_merged_string))])
+
+                    else:
+                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                                 outdir=outdir,
                                                                                 fmriname=fmriname,
                                                                                 highpass=highpass,
@@ -306,9 +332,7 @@ if ses_to_analyze:
                         if not regressor_file:
                             raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                         if seed_analysis_output == 'dense':
-                            parcel_file = "NONE"
-                            parcel_name = "NONE"
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                 outdir=outdir,
                                                                 fmriname=fmriname,
                                                                 highpass=highpass,
@@ -320,8 +344,36 @@ if ses_to_analyze:
                                                                 ROIsFolder=ROIsFolder,
                                                                 pipeline=preprocessing_type,
                                                                 ICAoutputs=ICAoutputs,
-                                                                finalfile=fmritcs,    
-                                                                confound=motion_confounds_filepath,                                     
+                                                                finalfile=fmritcs,
+                                                                confound=motion_confounds_filepath,
+                                                                vol_finalfile=vol_fmritcs,
+                                                                bold_ref=bold_ref,
+                                                                fmrifilename=fmriname,
+                                                                fmrifoldername=shortfmriname,
+                                                                lowresmesh=lowresmesh,
+                                                                fmrires=fmrires,
+                                                                smoothing=smoothing,
+                                                                temporal_filter=highpass,
+                                                                parcel_file="NONE",
+                                                                parcel_name="NONE",
+                                                                regname=msm_all_reg_name,
+                                                                seedROI=seed))])
+
+                        else:
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                outdir=outdir,
+                                                                fmriname=fmriname,
+                                                                highpass=highpass,
+                                                                fmrires=fmrires)),
+                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                outdir=outdir,
+                                                                DownSampleFolder=DownSampleFolder,
+                                                                ResultsFolder=ResultsFolder,
+                                                                ROIsFolder=ROIsFolder,
+                                                                pipeline=preprocessing_type,
+                                                                ICAoutputs=ICAoutputs,
+                                                                finalfile=fmritcs,
+                                                                confound=motion_confounds_filepath,
                                                                 vol_finalfile=vol_fmritcs,
                                                                 bold_ref=bold_ref,
                                                                 fmrifilename=fmriname,
@@ -347,9 +399,34 @@ if ses_to_analyze:
                 if not regressor_file:
                     raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                 if seed_analysis_output == 'dense':
-                    parcel_file = "NONE"
-                    parcel_name = "NONE"
-                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                outdir=outdir,
+                                                                fmriname=fmriname,
+                                                                highpass=highpass,
+                                                                fmrires=fmrires)),
+                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                outdir=outdir,
+                                                                DownSampleFolder=DownSampleFolder,
+                                                                ResultsFolder=ResultsFolder,
+                                                                ROIsFolder=ROIsFolder,
+                                                                pipeline=preprocessing_type,
+                                                                ICAoutputs=ICAoutputs,
+                                                                finalfile=fmritcs,
+                                                                vol_finalfile=vol_fmritcs,
+                                                                confound=motion_confounds_filepath,
+                                                                bold_ref=bold_ref,
+                                                                fmrifilename=fmriname,
+                                                                fmrifoldername=shortfmriname,
+                                                                lowresmesh=lowresmesh,
+                                                                fmrires=fmrires,
+                                                                smoothing=smoothing,
+                                                                temporal_filter=highpass,
+                                                                parcel_file="NONE",
+                                                                parcel_name="NONE",
+                                                                regname=msm_all_reg_name,
+                                                                seedROI=seed_ROI_name[0]))])
+                else:
+                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                 outdir=outdir,
                                                                 fmriname=fmriname,
                                                                 highpass=highpass,
@@ -385,7 +462,7 @@ if ses_to_analyze:
             if seed_handling == "together":
                 seed = seed_ROI_merged_string
             else:
-                for seed in seed_ROI_name:        
+                for seed in seed_ROI_name:
                     rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
                                                                 outdir=outdir,
                                                                 fmriname=level_2_foldername,
@@ -402,7 +479,7 @@ if ses_to_analyze:
                                                                 regname=msm_all_reg_name,
                                                                 parcel_name=parcel_name,
                                                                 seedROI=seed))])
-                                                                
+
                     for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                         if stage in args.stages:
                             stage_func()
@@ -424,7 +501,7 @@ if ses_to_analyze:
                                                                 regname=msm_all_reg_name,
                                                                 parcel_name=parcel_name,
                                                                 seedROI=seed))])
-        
+
         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
             if stage in args.stages:
                 stage_func()
@@ -460,7 +537,7 @@ else:
                 vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
             else:
                 vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
-            
+
             zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
             fmrires = str(int(min(zooms[:3])))
             shortfmriname=fmritcs.split("/")[-2]
@@ -497,9 +574,34 @@ else:
                 if not regressor_file:
                     raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                 if seed_analysis_output == 'dense':
-                    parcel_file = "NONE"
-                    parcel_name = "NONE"
-                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=fmriname,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        DownSampleFolder=DownSampleFolder,
+                                                                        ResultsFolder=ResultsFolder,
+                                                                        ROIsFolder=ROIsFolder,
+                                                                        pipeline=preprocessing_type,
+                                                                        ICAoutputs=ICAoutputs,
+                                                                        finalfile=fmritcs,
+                                                                        vol_finalfile=vol_fmritcs,
+                                                                        bold_ref=bold_ref,
+                                                                        fmrifilename=fmriname,
+                                                                        fmrifoldername=shortfmriname,
+                                                                        lowresmesh=lowresmesh,
+                                                                        fmrires=fmrires,
+                                                                        smoothing=smoothing,
+                                                                        temporal_filter=highpass,
+                                                                        confound=motion_confounds_filepath,
+                                                                        parcel_file="NONE",
+                                                                        parcel_name="NONE",
+                                                                        regname=msm_all_reg_name,
+                                                                        seedROI=seed_ROI_merged_string))])
+                else:
+                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                         outdir=outdir,
                                                                         fmriname=fmriname,
                                                                         highpass=highpass,
@@ -539,9 +641,34 @@ else:
                     if not regressor_file:
                         raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                     if seed_analysis_output == 'dense':
-                        parcel_file = "NONE"
-                        parcel_name = "NONE"
-                    rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                    outdir=outdir,
+                                                                    fmriname=fmriname,
+                                                                    highpass=highpass,
+                                                                    fmrires=fmrires)),
+                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                    outdir=outdir,
+                                                                    DownSampleFolder=DownSampleFolder,
+                                                                    ResultsFolder=ResultsFolder,
+                                                                    ROIsFolder=ROIsFolder,
+                                                                    pipeline=preprocessing_type,
+                                                                    vol_finalfile=vol_fmritcs,
+                                                                    ICAoutputs=ICAoutputs,
+                                                                    finalfile=fmritcs,
+                                                                    bold_ref = bolds_ref[idx],
+                                                                    fmrifilename=fmriname,
+                                                                    fmrifoldername=shortfmriname,
+                                                                    lowresmesh=lowresmesh,
+                                                                    fmrires=fmrires,
+                                                                    smoothing=smoothing,
+                                                                    confound=motion_confounds_filepath,
+                                                                    temporal_filter=highpass,
+                                                                    parcel_file="NONE",
+                                                                    parcel_name="NONE",
+                                                                    regname=msm_all_reg_name,
+                                                                    seedROI=seed))])
+                    else:
+                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                     outdir=outdir,
                                                                     fmriname=fmriname,
                                                                     highpass=highpass,
@@ -576,9 +703,35 @@ else:
             if not regressor_file:
                 raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
             if seed_analysis_output == 'dense':
-                parcel_file = "NONE"
-                parcel_name = "NONE"
-            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                    outdir=outdir,
+                                                                    fmriname=fmriname,
+                                                                    highpass=highpass,
+                                                                    fmrires=fmrires)),
+                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                    outdir=outdir,
+                                                                    DownSampleFolder=DownSampleFolder,
+                                                                    ResultsFolder=ResultsFolder,
+                                                                    ROIsFolder=ROIsFolder,
+                                                                    pipeline=preprocessing_type,
+                                                                    ICAoutputs=ICAoutputs,
+                                                                    vol_finalfile=vol_fmritcs,
+                                                                    finalfile=fmritcs,
+                                                                    bold_ref = bolds_ref[idx],
+                                                                    fmrifilename=fmriname,
+                                                                    fmrifoldername=shortfmriname,
+                                                                    lowresmesh=lowresmesh,
+                                                                    fmrires=fmrires,
+                                                                    smoothing=smoothing,
+                                                                    confound=motion_confounds_filepath,
+                                                                    temporal_filter=highpass,
+                                                                    parcel_file="NONE",
+                                                                    parcel_name="NONE",
+                                                                    regname=msm_all_reg_name,
+                                                                    seedROI=seed_ROI_name[0]))])
+
+            else:
+                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                     outdir=outdir,
                                                                     fmriname=fmriname,
                                                                     highpass=highpass,
@@ -614,7 +767,7 @@ else:
             if seed_handling == "together":
                 seed = seed_ROI_merged_string
             else:
-                for seed in seed_ROI_name:        
+                for seed in seed_ROI_name:
                     rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
                                                             outdir=outdir,
                                                             fmriname=level_2_foldername,
@@ -631,7 +784,7 @@ else:
                                                             regname=msm_all_reg_name,
                                                             parcel_name=parcel_name,
                                                             seedROI=seed))])
-                                                            
+
                     for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                         if stage in args.stages:
                             stage_func()
@@ -653,7 +806,7 @@ else:
                                                             regname=msm_all_reg_name,
                                                             parcel_name=parcel_name,
                                                             seedROI=seed))])
-    
+
         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
             if stage in args.stages:
                 stage_func()
