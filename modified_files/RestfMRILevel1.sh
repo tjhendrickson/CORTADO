@@ -496,7 +496,7 @@ main(){
 		for Hemisphere in L R ; do
 			#Prepare for film_gls
 			echo "MAIN: RUN_GLM: Prepare for film_gls"
-			${CARET7DIR}/wb_command -metric-dilate ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${DownSampleFolder}/.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii 50 ${FEATDir}/${fMRIFolder}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii -nearest
+			${CARET7DIR}/wb_command -metric-dilate ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii 50 ${FEATDir}/${fMRIFolder}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii -nearest
 
 			#Run film_gls on surface data
 			echo "MAIN: RUN_GLM: Run film_gls on surface data"
