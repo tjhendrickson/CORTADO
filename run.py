@@ -130,6 +130,7 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))',
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
+parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "R","SPSS","CSV","PYTHON"', choices=['R','r','SPSS','spss','CSV',"csv","PYTHON",'python','none','NONE'],default='CSV')
 args = parser.parse_args()
 
 # global variables
