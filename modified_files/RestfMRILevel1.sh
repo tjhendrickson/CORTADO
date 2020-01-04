@@ -186,7 +186,7 @@ local scriptName=$(basename $0)
 	# Write command-line arguments to log file
 	echo "READ_ARGS: outdir: ${outdir}"
 	echo "READ_ARGS: Pipeline: ${Pipeline}"
-	echo "READ_ARGS: Use ICAoutputs: ${ICAoutputs}"
+	echo "READ_ARGS: ICAstring: ${ICAoutputs}"
 	echo "READ_ARGS: File Derivative to Use for Analysis: ${FinalFile}"
 	echo "READ_ARGS: Volumetric File Derivative to Use for Analysis: ${volFinalFile}"
 	echo "READ_ARGS: Rest Reference Image: ${BoldRef}"
@@ -215,18 +215,6 @@ main(){
 
 	# initialize run variables
 	runParcellated=false; runVolume=false; runDense=false;
-
-	# determine whether to use ICA denoised outputs or not
-	if [ "${ICAoutputs}" = 'YES' ]; then
-		if [ "${Pipeline}" = "HCP" ]; then
-			ICAString="_FIXclean"
-		elif [ "${Pipeline}" = "fmriprep" ]; then
-			ICAString="_AROMAclean"
-		fi
-	else
-		ICAString=""
-	fi
-
 	# Determine whether to run Parcellated, and set strings used for filenaming
 	if [ "${Parcellation}" != "NONE" ]; then
 		# Run Parcellated Analyses
@@ -283,7 +271,7 @@ main(){
 	##### MAKE_DESIGNS: MAKE DESIGN FILES #####
 
 	# Create output .feat directory ($FEATDir) for this analysis
-	FEATDir="${outdir}/${fMRIFilename}${ParcellationString}${ICAString}_level1_seed${seedROI}.feat"
+	FEATDir="${outdir}/${fMRIFilename}${ParcellationString}${ICAoutputs}_level1_seed${seedROI}.feat"
 	echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
 	if [ -e ${FEATDir} ]; then
 		rm -r ${FEATDir}
@@ -378,7 +366,7 @@ main(){
 		echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Parcellating data"
 		echo "MAIN: SMOOTH_OR_PARCELLATE: PARCELLATE: Notice: currently parcellated time series has $FinalSmoothingString in file name, but no additional smoothing was applied!"
 		# FinalSmoothingString in parcellated filename allows subsequent commands to work for either dtseries or ptseries
-		${CARET7DIR}/wb_command -cifti-parcellate ${FinalFile} ${ParcellationFile} COLUMN ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAString}${Extension}
+		${CARET7DIR}/wb_command -cifti-parcellate ${FinalFile} ${ParcellationFile} COLUMN ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAoutputs}${Extension}
 	fi
 
 	### Apply spatial smoothing to CIFTI dense analysis
@@ -392,7 +380,7 @@ main(){
 			echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: AdditionalSmoothingFWHM: ${AdditionalSmoothingFWHM}"
 			echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: AdditionalSigma: ${AdditionalSigma}"
 			echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: Applying additional surface smoothing to CIFTI Dense data"
-			${CARET7DIR}/wb_command -cifti-smoothing ${FinalFile} ${AdditionalSigma} ${AdditionalSigma} COLUMN ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}${Extension} -left-surface ${DownSampleFolder}/${Subject}.L.midthickness.${LowResMesh}k_fs_LR.surf.gii -right-surface ${DownSampleFolder}/${Subject}.R.midthickness.${LowResMesh}k_fs_LR.surf.gii
+			${CARET7DIR}/wb_command -cifti-smoothing ${FinalFile} ${AdditionalSigma} ${AdditionalSigma} COLUMN ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}${Extension} -left-surface ${DownSampleFolder}/${Subject}.L.midthickness.${LowResMesh}k_fs_LR.surf.gii -right-surface ${DownSampleFolder}/${Subject}.R.midthickness.${LowResMesh}k_fs_LR.surf.gii
 		else
 			if [ "$FinalSmoothingFWHM" -eq "$OriginalSmoothingFWHM" ]; then
 				echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: No additional surface smoothing requested"
@@ -400,7 +388,7 @@ main(){
 				echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: WARNING: The surface smoothing requested \($FinalSmoothingFWHM\) is LESS than the surface smoothing already applied \(${OriginalSmoothingFWHM}\)."
 				echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_CIFTI: Continuing analysis with ${OriginalSmoothingFWHM} of total surface smoothing."
 			fi
-			cp ${FinalFile} ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}${Extension}
+			cp ${FinalFile} ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}${Extension}
 		fi
 	fi
 
@@ -484,24 +472,24 @@ main(){
 		echo "MAIN: RUN_GLM: Dense Grayordinates Analysis"
 		#Split into surface and volume
 		echo "MAIN: RUN_GLM: Split into surface and volume"
-		${CARET7DIR}/wb_command -cifti-separate-all ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}${Extension} -volume ${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.nii.gz -left ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.L.${LowResMesh}k_fs_LR.func.gii -right ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.R.${LowResMesh}k_fs_LR.func.gii
+		${CARET7DIR}/wb_command -cifti-separate-all ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}${Extension} -volume ${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.nii.gz -left ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi.L.${LowResMesh}k_fs_LR.func.gii -right ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi.R.${LowResMesh}k_fs_LR.func.gii
 
 		#Run film_gls on subcortical volume data
 		echo "MAIN: RUN_GLM: Run film_gls on subcortical volume data"
-		film_gls --rn=${FEATDir}/SubcorticalVolumeStats --sa --ms=5 --in=${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.nii.gz --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --thr=1 --mode=volumetric
-		rm ${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.nii.gz
+		film_gls --rn=${FEATDir}/SubcorticalVolumeStats --sa --ms=5 --in=${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.nii.gz --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --thr=1 --mode=volumetric
+		rm ${FEATDir}/${fMRIFolderName}_AtlasSubcortical${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.nii.gz
 
 		#Run film_gls on cortical surface data
 		echo "MAIN: RUN_GLM: Run film_gls on cortical surface data"
 		for Hemisphere in L R ; do
 			#Prepare for film_gls
 			echo "MAIN: RUN_GLM: Prepare for film_gls"
-			${CARET7DIR}/wb_command -metric-dilate ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii 50 ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii -nearest
+			${CARET7DIR}/wb_command -metric-dilate ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii 50 ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii -nearest
 
 			#Run film_gls on surface data
 			echo "MAIN: RUN_GLM: Run film_gls on surface data"
-			film_gls --rn=${FEATDir}/${Hemisphere}_SurfaceStats --sa --ms=15 --epith=5 --in2=${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii --in=${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --mode=surface
-			rm ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAString}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii
+			film_gls --rn=${FEATDir}/${Hemisphere}_SurfaceStats --sa --ms=15 --epith=5 --in2=${DownSampleFolder}/${Subject}.${Hemisphere}.midthickness.${LowResMesh}k_fs_LR.surf.gii --in=${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --mode=surface
+			rm ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi_dil.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii ${FEATDir}/${fMRIFolderName}${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}.atlasroi.${Hemisphere}.${LowResMesh}k_fs_LR.func.gii
 		done
 
 		# Merge Cortical Surface and Subcortical Volume into Grayordinates
@@ -524,13 +512,13 @@ main(){
 		# Parcellated Processing
 		echo "MAIN: RUN_GLM: Parcellated Analysis"
 		# Convert CIFTI to "fake" NIFTI
-		${CARET7DIR}/wb_command -cifti-convert -to-nifti ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAString}${Extension} ${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAstring}_FAKENIFTI.nii.gz
+		${CARET7DIR}/wb_command -cifti-convert -to-nifti ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAoutputs}${Extension} ${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAoutputs}_FAKENIFTI.nii.gz
 		# Now run film_gls on the fakeNIFTI file
-		film_gls --rn=${FEATDir}/ParcellatedStats --in=${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAstring}_FAKENIFTI.nii.gz --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --thr=1 --mode=volumetric
+		film_gls --rn=${FEATDir}/ParcellatedStats --in=${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAoutputs}_FAKENIFTI.nii.gz --pd=${DesignMatrix} --con=${DesignContrasts} ${ExtraArgs} --thr=1 --mode=volumetric
 		# Remove "fake" NIFTI time series file
-		rm ${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAstring}_FAKENIFTI.nii.gz
+		rm ${FEATDir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ParcellationString}${ICAoutputs}_FAKENIFTI.nii.gz
 		# Convert "fake" NIFTI output files (copes, varcopes, zstats) back to CIFTI
-		templateCIFTI=${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAString}${Extension}
+		templateCIFTI=${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${ParcellationString}${ICAoutputs}${Extension}
 		for fakeNIFTI in `ls ${FEATDir}/ParcellatedStats/*.nii.gz` ; do
 			CIFTI=$( echo $fakeNIFTI | sed -e "s|.nii.gz|${Extension}|" );
 			${CARET7DIR}/wb_command -cifti-convert -from-nifti $fakeNIFTI $templateCIFTI $CIFTI -reset-timepoints 1 1

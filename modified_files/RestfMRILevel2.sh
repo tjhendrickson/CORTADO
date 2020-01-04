@@ -132,7 +132,7 @@ local scriptName=$(basename $0)
 	# Write command-line arguments to log file
 	echo "READ_ARGS: outdir: ${outdir}"
 	echo "READ_ARGS: Pipeline: ${Pipeline}"
-	echo "READ_ARGS: Use ICAoutputs: ${ICAoutputs}"
+	echo "READ_ARGS: ICAstring: ${ICAoutputs}"
 	echo "READ_ARGS: fMRIFilenames: ${fMRIFilenames}"
 	echo "READ_ARGS: LevelTwoFolderName: ${LevelTwoFolderName}"
 	echo "READ_ARGS: FinalSmoothingFWHM: ${FinalSmoothingFWHM}"
@@ -156,16 +156,6 @@ main(){
 	runParcellated=false; runVolume=false; runDense=false;
 	Analyses=""; ExtensionList=""; ScalarExtensionList="";
 
-	# determine whether to use ICA denoised outputs or not
-	if [[ "${ICAoutputs}" = 'YES' ]]; then
-		if [[ "${Pipeline}" = "HCP" ]]; then
-			ICAString="_FIXclean"
-		elif [[ "${Pipeline}" = "fmriprep" ]]; then
-			ICAString="_AROMAclean"
-		fi
-	else
-		ICAString=""
-	fi
 
 	# Determine whether to run Parcellated, and set strings used for filenaming
 	if [[ "${Parcellation}" != "NONE" ]] ; then
@@ -248,7 +238,7 @@ main(){
 	for fMRIFilename in $fMRIFilenames ; do 
 	NumFirstLevelFolders=$(($NumFirstLevelFolders+1));
 	# get fsf name that corresponds to fMRI name
-	LevelOneFEATDirSTRING="${LevelOneFEATDirSTRING}${outdir}/${fMRIFilename}${ParcellationString}${ICAString}_level1_seed${seedROI}.feat "; # space character at end is needed to separate multiple FEATDir strings
+	LevelOneFEATDirSTRING="${LevelOneFEATDirSTRING}${outdir}/${fMRIFilename}${ParcellationString}${ICAoutputs}_level1_seed${seedROI}.feat "; # space character at end is needed to separate multiple FEATDir strings
 	done
 	
 	echo "Level One FEAT Dirs: ${LevelOneFEATDirSTRING}"
@@ -262,7 +252,7 @@ main(){
 	##### MAKE DESIGN FILES AND LEVEL2 DIRECTORY #####
 
 	# Make LevelTwoFEATDir
-	LevelTwoFEATDir="${outdir}/${LevelTwoFolderName}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}${ICAString}_level2_seed${seedROI}.feat"
+	LevelTwoFEATDir="${outdir}/${LevelTwoFolderName}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}${ICAoutputs}_level2_seed${seedROI}.feat"
 	if [[ -e ${LevelTwoFEATDir} ]] ; then
 	rm -r ${LevelTwoFEATDir}
 	mkdir ${LevelTwoFEATDir}

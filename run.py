@@ -11,8 +11,11 @@ from bids.grabbids import BIDSLayout
 from functools import partial
 from collections import OrderedDict
 import pdb
-from rsfMRI_seed import write_regressor
-
+from rsfMRI_seed import SeedIO
+import nibabel.cifti2 as ci
+import cifti
+import fcntl as F
+import pandas as pd
 
 def run(command, env={}, cwd=None):
     merged_env = os.environ
@@ -56,7 +59,7 @@ def run_seed_level1_rsfMRI_processing(**args):
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
     cmd = '/RestfMRILevel1.sh ' + \
         '--outdir={outdir} ' + \
-        '--ICAoutputs={ICAoutputs} ' + \
+        '--ICAoutputs={ICAstring} ' + \
         '--pipeline={pipeline} ' + \
         '--finalfile={finalfile} ' + \
         '--volfinalfile={vol_finalfile} ' + \
@@ -84,7 +87,7 @@ def run_seed_level2_rsfMRI_processing(**args):
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
     cmd = '/RestfMRILevel2.sh ' + \
         '--outdir={outdir} ' + \
-        '--ICAoutputs={ICAoutputs} ' + \
+        '--ICAoutputs={ICAstring} ' + \
         '--pipeline={pipeline} ' + \
         '--fmrifilenames={fmrifilename} ' + \
         '--lvl2fmrifoldername={level_2_foldername} ' + \
@@ -130,7 +133,7 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))',
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
-parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "R","SPSS","CSV","PYTHON"', choices=['R','r','SPSS','spss','CSV',"csv","PYTHON",'python','none','NONE'],default='CSV')
+parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "R","SPSS","CSV","PYTHON"', choices=['CSV',"csv",'none','NONE'],default='CSV')
 args = parser.parse_args()
 
 # global variables
@@ -196,28 +199,33 @@ if ses_to_analyze:
         if preprocessing_type == 'HCP':
             # use ICA outputs
             if ICAoutputs == 'YES':
+                ICAstring="_FIXclean"
                 if selected_reg_name == msm_all_reg_name:
                     bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,type='clean',
                                                             extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
                 else:
                     bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,type='clean',
                                                             extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
-
+                
             # do not use ICA outputs
             else:
+                ICAstring=""
                 if selected_reg_name == msm_all_reg_name:
                     bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
                                                             extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
                 else:
                     bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
                                                             extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                
 
         elif preprocessing_type == 'fmriprep':
             #use ICA outputs
             if ICAoutputs == 'YES':
+                ICAstring="_AROMAclean"
                 bolds = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
             # do not use ICA outputs
             else:
+                ICAstring=""
                 bolds = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='bold',task='rest') if 'preproc' in f.filename]
             # will need bold reference images
             bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
@@ -276,11 +284,10 @@ if ses_to_analyze:
 
             if len(seed_ROI_name) > 1:
                 if seed_handling == "together":
-                    separator = "-"
-                    seed_ROI_merged_string = separator.join(seed_ROI_name)
-                    regressor_file = seed_ROI_merged_string + '-Regressor.txt'
                     if preprocessing_type == 'HCP':
-                        write_regressor(outdir,fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name, seed_handling)
+                        regressor_file = SeedIO_init.write_regressor()
+                        seed_ROI_merged_string = os.path.basename(regressor_file).split('-Regressor.txt')[0]
                     elif preprocessing_type == 'fmriprep':
                         pass
                     if not regressor_file:
@@ -294,7 +301,7 @@ if ses_to_analyze:
                                                     ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
                                                                                     outdir=outdir,
                                                                                     pipeline=preprocessing_type,
-                                                                                    ICAoutputs=ICAoutputs,
+                                                                                    ICAstring=ICAstring,
                                                                                     finalfile=fmritcs,
                                                                                     vol_finalfile=vol_fmritcs,
                                                                                     bold_ref=bold_ref,
@@ -312,6 +319,9 @@ if ses_to_analyze:
                                                                                     parcel_name="NONE",
                                                                                     regname=selected_reg_name,
                                                                                     seedROI=seed_ROI_merged_string))])
+                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                            if stage in args.stages:
+                                stage_func()
 
                     else:
                         rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
@@ -322,7 +332,7 @@ if ses_to_analyze:
                                                     ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
                                                                                     outdir=outdir,
                                                                                     pipeline=preprocessing_type,
-                                                                                    ICAoutputs=ICAoutputs,
+                                                                                    ICAstring=ICAstring,
                                                                                     finalfile=fmritcs,
                                                                                     vol_finalfile=vol_fmritcs,
                                                                                     bold_ref=bold_ref,
@@ -340,16 +350,15 @@ if ses_to_analyze:
                                                                                     parcel_name=parcel_name,
                                                                                     regname=selected_reg_name,
                                                                                     seedROI=seed_ROI_merged_string))])
-                    for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-                        if stage in args.stages:
-                            stage_func()
+                        # run through creation of data first, then handle easy output creation
+                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                            if stage in args.stages:
+                                stage_func()
                 else:
                     for seed in seed_ROI_name:
-                        parcel_file = args.parcellation_file
-                        parcel_name = args.parcellation_name
-                        regressor_file = seed + '-Regressor.txt'
                         if preprocessing_type == 'HCP':
-                            write_regressor(outdir,fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                            SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed, seed_handling)
+                            regressor_file = SeedIO_init.write_regressor()
                         elif preprocessing_type == 'fmriprep':
                             pass
                         if not regressor_file:
@@ -366,7 +375,7 @@ if ses_to_analyze:
                                                                 ResultsFolder=ResultsFolder,
                                                                 ROIsFolder=ROIsFolder,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 finalfile=fmritcs,
                                                                 confound=motion_confounds_filepath,
                                                                 vol_finalfile=vol_fmritcs,
@@ -394,7 +403,7 @@ if ses_to_analyze:
                                                                 ResultsFolder=ResultsFolder,
                                                                 ROIsFolder=ROIsFolder,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 finalfile=fmritcs,
                                                                 confound=motion_confounds_filepath,
                                                                 vol_finalfile=vol_fmritcs,
@@ -414,9 +423,9 @@ if ses_to_analyze:
                             if stage in args.stages:
                                 stage_func()
             elif len(seed_ROI_name) == 1:
-                regressor_file = seed_ROI_name[0] + '-Regressor.txt'
                 if preprocessing_type == 'HCP':
-                    write_regressor(outdir,fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name[0], seed_handling)
+                    regressor_file = SeedIO_init.write_regressor()
                 elif preprocessing_type == 'fmriprep':
                     pass
                 if not regressor_file:
@@ -433,7 +442,7 @@ if ses_to_analyze:
                                                                 ResultsFolder=ResultsFolder,
                                                                 ROIsFolder=ROIsFolder,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 finalfile=fmritcs,
                                                                 vol_finalfile=vol_fmritcs,
                                                                 confound=motion_confounds_filepath,
@@ -460,7 +469,7 @@ if ses_to_analyze:
                                                                 ResultsFolder=ResultsFolder,
                                                                 ROIsFolder=ROIsFolder,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 finalfile=fmritcs,
                                                                 vol_finalfile=vol_fmritcs,
                                                                 confound=motion_confounds_filepath,
@@ -495,7 +504,7 @@ if ses_to_analyze:
                                                     ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                     outdir=outdir,
                                                                     pipeline=preprocessing_type,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     fmrifilename=fmrinames,
                                                                     level_2_foldername=level_2_foldername,
                                                                     smoothing=smoothing,
@@ -517,7 +526,7 @@ if ses_to_analyze:
                                                     ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                     outdir=outdir,
                                                                     pipeline=preprocessing_type,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     fmrifilename=fmrinames,
                                                                     level_2_foldername=level_2_foldername,
                                                                     smoothing=smoothing,
@@ -539,7 +548,7 @@ if ses_to_analyze:
                                                     ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                     outdir=outdir,
                                                                     pipeline=preprocessing_type,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     fmrifilename=fmrinames,
                                                                     level_2_foldername=level_2_foldername,
                                                                     smoothing=smoothing,
@@ -561,7 +570,7 @@ if ses_to_analyze:
                                                     ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                     outdir=outdir,
                                                                     pipeline=preprocessing_type,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     fmrifilename=fmrinames,
                                                                     level_2_foldername=level_2_foldername,
                                                                     smoothing=smoothing,
@@ -585,6 +594,7 @@ else:
     if preprocessing_type == 'HCP':
         # use ICA outputs
         if ICAoutputs == 'YES':
+            ICAstring="_FIXclean"
             if selected_reg_name == msm_all_reg_name:
                 bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
                                                         extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
@@ -593,6 +603,7 @@ else:
                                                         extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
         # do not use ICA outputs
         else:
+            ICAstring=""
             if selected_reg_name == msm_all_reg_name:
                 bolds = [f.filename for f in layout.get(subject=subject_label,
                                                         extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
@@ -603,9 +614,11 @@ else:
     elif preprocessing_type == 'fmriprep':
         #use ICA outputs
         if ICAoutputs == 'YES':
+            ICAstring="_AROMAclean"
             bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
         # do not use ICA outputs
         else:
+            ICAstring=""
             bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'preproc' in f.filename]
         bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
     for idx,fmritcs in enumerate(bolds):
@@ -654,11 +667,10 @@ else:
             vol_fmritcs="NONE"
         if len(seed_ROI_name) > 1:
             if seed_handling == "together":
-                separator = "-"
-                seed_ROI_merged_string = separator.join(seed_ROI_name)
-                regressor_file = seed_ROI_merged_string + '-Regressor.txt'
                 if preprocessing_type == 'HCP':
-                    write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name, seed_handling)
+                    regressor_file = SeedIO_init.write_regressor()
+                    seed_ROI_merged_string = os.path.basename(regressor_file).split('-Regressor.txt')[0]
                 elif preprocessing_type == 'fmriprep':
                     pass
                 if not regressor_file:
@@ -675,7 +687,7 @@ else:
                                                                         ResultsFolder=ResultsFolder,
                                                                         ROIsFolder=ROIsFolder,
                                                                         pipeline=preprocessing_type,
-                                                                        ICAoutputs=ICAoutputs,
+                                                                        ICAstring=ICAstring,
                                                                         finalfile=fmritcs,
                                                                         vol_finalfile=vol_fmritcs,
                                                                         bold_ref=bold_ref,
@@ -702,7 +714,7 @@ else:
                                                                         ResultsFolder=ResultsFolder,
                                                                         ROIsFolder=ROIsFolder,
                                                                         pipeline=preprocessing_type,
-                                                                        ICAoutputs=ICAoutputs,
+                                                                        ICAstring=ICAstring,
                                                                         finalfile=fmritcs,
                                                                         vol_finalfile=vol_fmritcs,
                                                                         bold_ref=bold_ref,
@@ -723,9 +735,9 @@ else:
                         stage_func()
             else:
                 for seed in seed_ROI_name:
-                    regressor_file = seed + '-Regressor.txt'
                     if preprocessing_type == 'HCP':
-                        write_regressor(fmritcs, parcel_file, seed, regressor_file)
+                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed, seed_handling)
+                        regressor_file = SeedIO_init.write_regressor()
                     elif preprocessing_type == 'fmriprep':
                         pass
                     if not regressor_file:
@@ -743,7 +755,7 @@ else:
                                                                     ROIsFolder=ROIsFolder,
                                                                     pipeline=preprocessing_type,
                                                                     vol_finalfile=vol_fmritcs,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     finalfile=fmritcs,
                                                                     bold_ref = bolds_ref[idx],
                                                                     fmrifilename=fmriname,
@@ -770,7 +782,7 @@ else:
                                                                     ROIsFolder=ROIsFolder,
                                                                     pipeline=preprocessing_type,
                                                                     vol_finalfile=vol_fmritcs,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     finalfile=fmritcs,
                                                                     bold_ref = bolds_ref[idx],
                                                                     fmrifilename=fmriname,
@@ -788,8 +800,9 @@ else:
                         if stage in args.stages:
                             stage_func()
         elif len(seed_ROI_name) == 1:
-            regressor_file = seed_ROI_name[0] + '-Regressor.txt'
-            write_regressor(fmritcs, parcel_file, seed_ROI_name, regressor_file)
+            if preprocessing_type == 'HCP':
+                SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name[0], seed_handling)
+                regressor_file = SeedIO_init.write_regressor()
             if not regressor_file:
                 raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
             if seed_analysis_output == 'dense':
@@ -804,7 +817,7 @@ else:
                                                                     ResultsFolder=ResultsFolder,
                                                                     ROIsFolder=ROIsFolder,
                                                                     pipeline=preprocessing_type,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     vol_finalfile=vol_fmritcs,
                                                                     finalfile=fmritcs,
                                                                     bold_ref = bolds_ref[idx],
@@ -832,7 +845,7 @@ else:
                                                                     ResultsFolder=ResultsFolder,
                                                                     ROIsFolder=ROIsFolder,
                                                                     pipeline=preprocessing_type,
-                                                                    ICAoutputs=ICAoutputs,
+                                                                    ICAstring=ICAstring,
                                                                     vol_finalfile=vol_fmritcs,
                                                                     finalfile=fmritcs,
                                                                     bold_ref = bolds_ref[idx],
@@ -867,7 +880,7 @@ else:
                                                 ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                 outdir=outdir,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 fmrifilename=fmrinames,
                                                                 level_2_foldername=level_2_foldername,
                                                                 smoothing=smoothing,
@@ -889,7 +902,7 @@ else:
                                                 ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                 outdir=outdir,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 fmrifilename=fmrinames,
                                                                 level_2_foldername=level_2_foldername,
                                                                 smoothing=smoothing,
@@ -911,7 +924,7 @@ else:
                                                 ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                 outdir=outdir,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 fmrifilename=fmrinames,
                                                                 level_2_foldername=level_2_foldername,
                                                                 smoothing=smoothing,
@@ -933,7 +946,7 @@ else:
                                                 ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                 outdir=outdir,
                                                                 pipeline=preprocessing_type,
-                                                                ICAoutputs=ICAoutputs,
+                                                                ICAstring=ICAstring,
                                                                 fmrifilename=fmrinames,
                                                                 level_2_foldername=level_2_foldername,
                                                                 smoothing=smoothing,
