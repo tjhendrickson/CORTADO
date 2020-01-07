@@ -12,10 +12,7 @@ from functools import partial
 from collections import OrderedDict
 import pdb
 from rsfMRI_seed import SeedIO
-import nibabel.cifti2 as ci
-import cifti
-import fcntl as F
-import pandas as pd
+
 
 def run(command, env={}, cwd=None):
     merged_env = os.environ
@@ -133,7 +130,7 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))',
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
-parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "R","SPSS","CSV","PYTHON"', choices=['CSV',"csv",'none','NONE'],default='CSV')
+parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "R","SPSS","CSV","PYTHON"', choices=['CSV',"csv",'none','NONE'],default='NONE')
 args = parser.parse_args()
 
 # global variables
@@ -150,7 +147,6 @@ selected_reg_name = args.reg_name
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 preprocessing_type = args.preprocessing_type
 motion_confounds = args.motion_confounds
-
 if preprocessing_type == 'HCP':
     if not motion_confounds == 'NONE':
         motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
@@ -175,17 +171,48 @@ if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
 else:
     ICAoutputs = 'NO'
 
-# need a subject label in order to start
+# check on arguments
+print('\n')
+print("Running CORTADO ")
 if args.participant_label:
     subject_label=args.participant_label[0]
     layout = BIDSLayout(os.path.join(args.input_dir,'sub-'+subject_label))
+    print('\t-Subject ID: %s' %str(args.participant_label))
 else:
-    raise ValueError('An argument must be specified for participant label. Quitting.')
-# if subject label has sessions underneath those need to be outputted into different directories
+    raise ValueError('An argument must be specified for participant label. Exiting.')
 if args.session_label:
     ses_to_analyze = args.session_label
+    print('\t-Session ID: %s' %str(args.session_label))
 else:
+    # if subject label has sessions underneath those need to be outputted into different directories
     ses_to_analyze = layout.get_sessions(subject=subject_label)
+if args.seed_ROI_name:
+    print('\t-Seed ROI selected: %s' %str(seed_ROI_name))
+else:
+    print('\n')
+    raise ValueError('Selecting a seed name of interest must be specified after argument "--seed_ROI_name" is required. Exiting.')
+print('\t-Seed ROI handling: %s' %str(seed_handling))
+print('\t-Seed analysis output: %s' %str(seed_analysis_output))
+if seed_analysis_output == 'dense':
+    print('\t-Spatial smoothing applied: %smm' %str(smoothing))
+elif seed_analysis_output == 'parcellated':
+    if parcel_file == 'NONE':
+        print('\n')
+        raise ValueError('Parcellating output selected but no parcel file specified after argument "--parcellation_file". Exiting.')
+    else:
+        print('\t-Parcellation file to be used to parcellate outputs: %s' %str(parcel_file))
+    if parcel_name == 'NONE':
+        print('\n')
+        raise ValueError('Parcellating output selected but no parcel name specified after argument "--parcellation_name". Exiting.')
+    else:
+        print('\t-Short hand parcellation name to be used: %s' %str(parcel_name))
+print('\t-Input registration file to be used: %s' %str(selected_reg_name))
+print('\t-Whether motion confounds will be used for output: %s' %str(motion_confounds))
+print('\t-The preprocessing pipeline that the input comes from: %s' %str(preprocessing_type))
+print('\t-Use ICA outputs: %s' %str(ICAoutputs))
+print('\t-Use mixed effects if multiple of same acquisition: %s' %str(args.combine_resting_scans))
+print('\t-Text output format: %s' %str(args.text_output_format))
+print('\n')
 
 if ses_to_analyze:
     for ses_label in ses_to_analyze:
@@ -430,7 +457,7 @@ if ses_to_analyze:
                                 stage_func()
                         if preprocessing_type == 'HCP':
                             if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,text_output_format=args.text_output_format,level=1)
             elif len(seed_ROI_name) == 1:
                 if preprocessing_type == 'HCP':
                     SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
@@ -498,7 +525,7 @@ if ses_to_analyze:
                         stage_func()
                 if preprocessing_type == 'HCP':
                     if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,text_output_format=args.text_output_format,level=1)
     if level_2_foldername == 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined':
         # convert list to string expected by RestfMRILevel2.sh
         fmrinames = '@'.join(str(i) for i in fmrinames)

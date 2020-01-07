@@ -27,11 +27,6 @@
 #
 #~ND~END~
 
-
-set -e
-set -x
-
-
 # Requirements for this script
 #  installed versions of FSL 6.0.1
 #  environment: FSLDIR, CARET7DIR

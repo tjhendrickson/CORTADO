@@ -1,6 +1,4 @@
 #!/bin/bash
-
-set -x
 #
 # Author(s): Timothy B. Brown (tbbrown at wustl dot edu)
 #

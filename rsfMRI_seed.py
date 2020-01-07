@@ -4,6 +4,11 @@ import nibabel.cifti2
 import pandas as pd
 import os
 import cifti
+import pdb
+import fcntl as F
+import csv
+import numpy as np
+
 
 class SeedIO:
     def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name):
@@ -22,12 +27,13 @@ class SeedIO:
         if not os.path.isdir(self.output_dir):
             os.makedirs(self.output_dir)
         # determine fmriname
-        self.fmriname = cifti_file.path.basename.split(".")[0]
+        self.fmriname = os.path.basename(cifti_file).split('.')[0]
                 
         # read parcel labels into list to query later
         read_parcel_file = cifti.read(self.parcel_file)
         parcel_file_label_tuple = read_parcel_file[1][0][0][1]
         parcel_labels = []
+        self.parcel_labels = [str(r) for r in self.parcel_labels]
         for value in parcel_file_label_tuple:
                 if not '???' in parcel_file_label_tuple[value][0]:
                         parcel_labels.append(parcel_file_label_tuple[value][0])
@@ -41,12 +47,12 @@ class SeedIO:
             self.regressor_file = self.seed_ROI_name + '-Regressor.txt'
 
     def write_regressor(self):
-        print('output_dir: ' + self.output_dir)
-        print('cifti_file: ' + self.cifti_file)
-        print('parcel_file: ' + self.parcel_file)
-        print('seed_ROI_name: ' + str(self.seed_ROI_name))
-        # figure out what name of regressor file should be
-        print('regressor_file: ' + self.regressor_file)
+        print('\n')
+        print('rsfMRI_seed.py: Create regressor file ')
+        print('\t-Output folder: ' + self.output_dir)
+        print('\t-Cifti file: ' + self.cifti_file)
+        print('\t-Parcel file: ' + self.parcel_file)
+        print('\t-Seed ROI name: ' + str(self.seed_ROI_name))
         
         # does CIFTI file exist?
         try:
@@ -90,41 +96,73 @@ class SeedIO:
         else:
             df['avg'] = df[self.seed_ROI_name].mean(axis=1)
             df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
+        # figure out what name of regressor file should be
+        print('\tregressor file: %s' %regressor_file_path)
+        print('\n') 
         return regressor_file_path 
-    def create_text_output(self,ICAstring,text_output_format,level):
+    def create_text_output(self,ICAstring,text_output_dir,text_output_format,level):
+        print('\n')
+        print('rsfMRI_seed.py: Create Text Output ')
+        print('\t-Text output folder: %s' %str(text_output_dir))
+        print('\t-Text output format: %s'%str(text_output_format))
+        print('\t-Cifti file: %s' %str(self.cifti_file))
+        print('\t-Parcel file: %s' %str(self.parcel_file))
+        print('\t-Parcel name: %s' %str(self.parcel_name))
+        print('\t-Seed ROI name/s: %s' %str(self.seed_ROI_name))
+        print('\t-The fmri file name: %s' %str(self.fmriname))
+        print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(ICAstring))
+        print('\t-Analysis level to output data from: %s' %str(level))
+        print('\n')
+        pdb.set_trace()
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
-        
         CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
         zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
         # set outputs suffixes
         if text_output_format == "CSV" or text_output_format == "csv":
             # if file exists and subject and session have yet to be added, add to file
-            output_text_file = os.path.join(args.output_dir,"_".join(fmriname.split('_')[2:])+"_"+parcel_name+ICAString+'_level1_seed'+seed_ROI_merged_string+".csv")
+            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
             # prevent race condition by using "try" statement
             try:
                 read_output_text_file = open(output_text_file,'r')
             except:
                 # if doesn't exist create headers and add subject/session data to file
                 write_output_text_file = open(output_text_file,'w')
-                
-                read_parcel_file = cifti.read(parcel_file)
-                parcel_file_label_tuple = read_parcel_file[1][0][0][1]
-                fieldnames = []
-                for value in parcel_file_label_tuple:
-                    if not '???' in parcel_file_label_tuple[value][0]:
-                        fieldnames.append(parcel_file_label_tuple[value][0])
-                # append subject and session ID to fieldname list
+            # file exists and is accessible, ensure that to be appended data does not yet exist on it
+            fieldnames = self.parcel_labels
+            # append subject and session ID to fieldname list
+            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
                 fieldnames.insert(0,'Session ID')
-                fieldnames.insert(0,'Subject ID')
-            # file exists and is accessible, ensure that data does not yet exist on it 
-            read_output_text_file = pd(output_text_file,'r')
+            fieldnames.insert(0,'Subject ID')
             
-            # now append
-            F.flock(read_output_text_file, F.LOCK_EX)
-            with open(output_text_file,'w') as f:
-                    pass
+            # if dataset is empty pandas will throw an error
+            try:     
+                q
+            except:
+                pdb.set_trace()
+                #add header and append data to file
+                write_output_text_file = open(output_text_file,'w')
+                try:
+                    # try holding an exclusive lock first
+                    F.flock(write_output_text_file, F.LOCK_EX | F.LOCK_NB)
+                except IOError:
+                    raise IOError('flock() failed to hold an exclusive lock')
+                writer = csv.writer(write_output_text_file)
+                writer.writerow(fieldnames)
+                row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
+                if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+                    row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
+                row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
+                writer.writerow(np.squeeze(zstat_data_img.get_fdata()).tolist())
+                # Unlock file
+                try:
+                    F.flock(write_output_text_file, F.LOCK_UN)
+                except IOError:
+                    raise IOError('flock() failed to unlock file.')
+            # find participant if it exists
+
+
 
 
 
