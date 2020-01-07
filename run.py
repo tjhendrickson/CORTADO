@@ -285,7 +285,7 @@ if ses_to_analyze:
             if len(seed_ROI_name) > 1:
                 if seed_handling == "together":
                     if preprocessing_type == 'HCP':
-                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name, seed_handling)
+                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name)
                         regressor_file = SeedIO_init.write_regressor()
                         seed_ROI_merged_string = os.path.basename(regressor_file).split('-Regressor.txt')[0]
                     elif preprocessing_type == 'fmriprep':
@@ -322,6 +322,9 @@ if ses_to_analyze:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                        if preprocessing_type == 'HCP':
+                            if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
 
                     else:
                         rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
@@ -354,10 +357,13 @@ if ses_to_analyze:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                        if preprocessing_type == 'HCP':
+                            if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
                 else:
                     for seed in seed_ROI_name:
                         if preprocessing_type == 'HCP':
-                            SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed, seed_handling)
+                            SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed)
                             regressor_file = SeedIO_init.write_regressor()
                         elif preprocessing_type == 'fmriprep':
                             pass
@@ -422,9 +428,12 @@ if ses_to_analyze:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                        if preprocessing_type == 'HCP':
+                            if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
             elif len(seed_ROI_name) == 1:
                 if preprocessing_type == 'HCP':
-                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name[0], seed_handling)
+                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
                     regressor_file = SeedIO_init.write_regressor()
                 elif preprocessing_type == 'fmriprep':
                     pass
@@ -487,6 +496,9 @@ if ses_to_analyze:
                 for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                     if stage in args.stages:
                         stage_func()
+                if preprocessing_type == 'HCP':
+                    if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
     if level_2_foldername == 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined':
         # convert list to string expected by RestfMRILevel2.sh
         fmrinames = '@'.join(str(i) for i in fmrinames)
@@ -668,7 +680,7 @@ else:
         if len(seed_ROI_name) > 1:
             if seed_handling == "together":
                 if preprocessing_type == 'HCP':
-                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name, seed_handling)
+                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name)
                     regressor_file = SeedIO_init.write_regressor()
                     seed_ROI_merged_string = os.path.basename(regressor_file).split('-Regressor.txt')[0]
                 elif preprocessing_type == 'fmriprep':
@@ -733,10 +745,13 @@ else:
                 for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                     if stage in args.stages:
                         stage_func()
+                if preprocessing_type == 'HCP':
+                    if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
             else:
                 for seed in seed_ROI_name:
                     if preprocessing_type == 'HCP':
-                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed, seed_handling)
+                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed)
                         regressor_file = SeedIO_init.write_regressor()
                     elif preprocessing_type == 'fmriprep':
                         pass
@@ -799,9 +814,12 @@ else:
                     for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                         if stage in args.stages:
                             stage_func()
+                    if preprocessing_type == 'HCP':
+                        if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                            SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
         elif len(seed_ROI_name) == 1:
             if preprocessing_type == 'HCP':
-                SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, seed_ROI_name[0], seed_handling)
+                SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
                 regressor_file = SeedIO_init.write_regressor()
             if not regressor_file:
                 raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
@@ -863,6 +881,9 @@ else:
             for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                 if stage in args.stages:
                     stage_func()
+            if preprocessing_type == 'HCP':
+                if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
     if level_2_foldername == 'sub-' + subject_label+ '_rsfMRI_combined':
         # convert list to string expected by RestfMRILevel2.sh
         fmrinames = '@'.join(str(i) for i in fmrinames)
@@ -892,6 +913,7 @@ else:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                       
             elif len(seed_ROI_name) == 1:
                 seed = seed_ROI_name[0]
             rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
@@ -936,6 +958,7 @@ else:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                            
             elif len(seed_ROI_name) == 1:
                 seed = seed_ROI_name[0]
             rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,

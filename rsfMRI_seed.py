@@ -21,6 +21,8 @@ class SeedIO:
         # create output folder if it does not exist
         if not os.path.isdir(self.output_dir):
             os.makedirs(self.output_dir)
+        # determine fmriname
+        self.fmriname = cifti_file.path.basename.split(".")[0]
                 
         # read parcel labels into list to query later
         read_parcel_file = cifti.read(self.parcel_file)
@@ -89,18 +91,11 @@ class SeedIO:
             df['avg'] = df[self.seed_ROI_name].mean(axis=1)
             df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
         return regressor_file_path 
-    def create_text_output(self,ICAoutputs,preprocessing_type,fmriname,text_output_format,parcel_name,level):
+    def create_text_output(self,ICAstring,text_output_format,level):
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
-        if ICAoutputs == 'YES':
-            if preprocessing_type == 'HCP':
-                ICAString="_FIXclean"
-            elif preprocessing_type == "fmriprep":
-                ICAString="_AROMAclean"
-        else:
-            ICAString=""
         
-        CORTADO_dir = os.path.join(self.output_dir,fmriname+"_"+parcel_name+ICAString+'_level' + str(level)+'_seed'+seed+".feat")
+        CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
         zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
         # set outputs suffixes
