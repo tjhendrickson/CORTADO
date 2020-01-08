@@ -33,11 +33,11 @@ class SeedIO:
         read_parcel_file = cifti.read(self.parcel_file)
         parcel_file_label_tuple = read_parcel_file[1][0][0][1]
         parcel_labels = []
-        self.parcel_labels = [str(r) for r in self.parcel_labels]
+        
         for value in parcel_file_label_tuple:
                 if not '???' in parcel_file_label_tuple[value][0]:
                         parcel_labels.append(parcel_file_label_tuple[value][0])
-        self.parcel_labels = parcel_labels
+        self.parcel_labels = [str(r) for r in parcel_labels]
         # determine regressor filename
         if not type(self.seed_ROI_name) == str:
             separator = "-"
@@ -113,7 +113,6 @@ class SeedIO:
         print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(ICAstring))
         print('\t-Analysis level to output data from: %s' %str(level))
         print('\n')
-        pdb.set_trace()
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
         CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
@@ -126,6 +125,7 @@ class SeedIO:
             # prevent race condition by using "try" statement
             try:
                 read_output_text_file = open(output_text_file,'r')
+                read_output_text_file.close()
             except:
                 # if doesn't exist create headers and add subject/session data to file
                 write_output_text_file = open(output_text_file,'w')
@@ -138,9 +138,8 @@ class SeedIO:
             
             # if dataset is empty pandas will throw an error
             try:     
-                q
+                output_text_file_df = pd.read_csv(output_text_file)
             except:
-                pdb.set_trace()
                 #add header and append data to file
                 write_output_text_file = open(output_text_file,'w')
                 try:
@@ -153,14 +152,28 @@ class SeedIO:
                 row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
                 if os.path.basename(self.output_dir).split('-')[0] == 'ses':
                     row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
-                row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
-                writer.writerow(np.squeeze(zstat_data_img.get_fdata()).tolist())
+                    row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
+                else:
+                    row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
+                pdb.set_trace()
+                writer.writerow(row_data)
                 # Unlock file
                 try:
                     F.flock(write_output_text_file, F.LOCK_UN)
+                    write_output_text_file.close()
                 except IOError:
                     raise IOError('flock() failed to unlock file.')
             # find participant if it exists
+            pdb.set_trace()
+            row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
+            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+                session_id = os.path.basename(self.output_dir).split('-')[1]
+                row_data.insert(0,session_id)
+                subject_id = self.output_dir.split('sub-')[1].split('/')[0]    
+                row_data.insert(0,subject_id)
+            else:
+                subject_id = os.path.basename(self.output_dir).split('-')[1]
+                row_data.insert(0,subject_id)
 
 
 
