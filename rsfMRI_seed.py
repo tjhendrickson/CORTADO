@@ -139,6 +139,52 @@ class SeedIO:
             # if dataset is empty pandas will throw an error
             try:     
                 output_text_file_df = pd.read_csv(output_text_file)
+                # find participant if it exists
+                row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
+                if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+                    session_id = os.path.basename(self.output_dir).split('-')[1]
+                    row_data.insert(0,session_id)
+                    subject_id = self.output_dir.split('sub-')[1].split('/')[0]    
+                    row_data.insert(0,subject_id)
+                else:
+                    subject_id = os.path.basename(self.output_dir).split('-')[1]
+                    row_data.insert(0,subject_id)
+                if session_id:
+                    if len(output_text_file_df[output_text_file_df['Session ID']==int(session_id)]) == 0:
+                        append_output_text_file = open(output_text_file,'a')
+                        try:
+                            # try holding an exclusive lock first
+                            F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
+                        except IOError:
+                            raise IOError('flock() failed to hold an exclusive lock')
+                        writer = csv.writer(append_output_text_file)
+                        writer.writerow(row_data)
+                        # Unlock file
+                        try:
+                            F.flock(append_output_text_file, F.LOCK_UN)
+                            append_output_text_file.close()
+                        except IOError:
+                            raise IOError('flock() failed to unlock file.')
+                    else:
+                        print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
+                else:
+                    if len(output_text_file_df[output_text_file_df['Subject ID']==int(subject_id)]) == 0:
+                        append_output_text_file = open(output_text_file,'a')
+                        try:
+                            # try holding an exclusive lock first
+                            F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
+                        except IOError:
+                            raise IOError('flock() failed to hold an exclusive lock')
+                        writer = csv.writer(append_output_text_file)
+                        writer.writerow(row_data)
+                        # Unlock file
+                        try:
+                            F.flock(append_output_text_file, F.LOCK_UN)
+                            append_output_text_file.close()
+                        except IOError:
+                            raise IOError('flock() failed to unlock file.')
+                    else:
+                        print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
             except:
                 #add header and append data to file
                 write_output_text_file = open(output_text_file,'w')
@@ -148,14 +194,13 @@ class SeedIO:
                 except IOError:
                     raise IOError('flock() failed to hold an exclusive lock')
                 writer = csv.writer(write_output_text_file)
-                writer.writerow(fieldnames)
                 row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
                 if os.path.basename(self.output_dir).split('-')[0] == 'ses':
                     row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
                     row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
                 else:
                     row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
-                pdb.set_trace()
+                writer.writerow(fieldnames)
                 writer.writerow(row_data)
                 # Unlock file
                 try:
@@ -163,17 +208,10 @@ class SeedIO:
                     write_output_text_file.close()
                 except IOError:
                     raise IOError('flock() failed to unlock file.')
-            # find participant if it exists
-            pdb.set_trace()
-            row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
-            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-                session_id = os.path.basename(self.output_dir).split('-')[1]
-                row_data.insert(0,session_id)
-                subject_id = self.output_dir.split('sub-')[1].split('/')[0]    
-                row_data.insert(0,subject_id)
-            else:
-                subject_id = os.path.basename(self.output_dir).split('-')[1]
-                row_data.insert(0,subject_id)
+                            
+                    
+                    
+                    
 
 
 

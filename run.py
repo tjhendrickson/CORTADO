@@ -33,7 +33,7 @@ def run(command, env={}, cwd=None):
 
 def run_Generatefsf_level1_processing(**args):
     args.update(os.environ)
-    cmd = '/generate_level1_fsf.sh ' + \
+    cmd = '/home/umii/hendr522/github/CORTADO/modified_files/generate_level1_fsf.sh ' + \
         '--taskname="{fmriname}" ' + \
         '--temporalfilter="{highpass}" ' + \
         '--originalsmoothing="{fmrires}" ' + \
@@ -43,7 +43,7 @@ def run_Generatefsf_level1_processing(**args):
 
 def run_Generatefsf_level2_processing(**args):
     args.update(os.environ)
-    cmd = '/generate_level2_fsf.sh ' + \
+    cmd = '/home/umii/hendr522/github/CORTADO/modified_files/generate_level2_fsf.sh ' + \
         '--taskname="{fmriname}" ' + \
         '--temporalfilter="{highpass}" ' + \
         '--originalsmoothing="{fmrires}" ' + \
@@ -54,7 +54,7 @@ def run_Generatefsf_level2_processing(**args):
 def run_seed_level1_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
-    cmd = '/RestfMRILevel1.sh ' + \
+    cmd = '/home/umii/hendr522/github/CORTADO/modified_files/RestfMRILevel1.sh ' + \
         '--outdir={outdir} ' + \
         '--ICAoutputs={ICAstring} ' + \
         '--pipeline={pipeline} ' + \
@@ -82,7 +82,7 @@ def run_seed_level1_rsfMRI_processing(**args):
 def run_seed_level2_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
-    cmd = '/RestfMRILevel2.sh ' + \
+    cmd = '/home/umii/hendr522/github/CORTADO/modified_files/RestfMRILevel2.sh ' + \
         '--outdir={outdir} ' + \
         '--ICAoutputs={ICAstring} ' + \
         '--pipeline={pipeline} ' + \
