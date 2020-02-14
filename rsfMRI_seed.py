@@ -112,9 +112,14 @@ class SeedIO:
         print('\t-The fmri file name: %s' %str(self.fmriname))
         print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(ICAstring))
         print('\t-Analysis level to output data from: %s' %str(level))
-        print('\n')
+        
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
+        if text_output_format == "CSV" or text_output_format == "csv":
+            # if file exists and subject and session have yet to be added, add to file
+            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
+            print('\t-Output file: %s' %str(output_text_file))
+        print('\n')
         CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
         zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
