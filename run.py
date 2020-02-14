@@ -130,7 +130,7 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))',
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
-parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "R","SPSS","CSV","PYTHON"', choices=['CSV',"csv",'none','NONE'],default='NONE')
+parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='NONE')
 args = parser.parse_args()
 
 # global variables
@@ -143,6 +143,7 @@ parcel_name = args.parcellation_name
 seed_ROI_name = args.seed_ROI_name
 seed_handling = args.seed_handling
 seed_analysis_output = args.seed_analysis_output
+text_output_format = args.text_output_format
 selected_reg_name = args.reg_name
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 preprocessing_type = args.preprocessing_type
@@ -351,7 +352,8 @@ if ses_to_analyze:
                                 stage_func()
                         if preprocessing_type == 'HCP':
                             if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
 
                     else:
                         rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
@@ -386,7 +388,8 @@ if ses_to_analyze:
                                 stage_func()
                         if preprocessing_type == 'HCP':
                             if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
                 else:
                     for seed in seed_ROI_name:
                         if preprocessing_type == 'HCP':
@@ -457,7 +460,8 @@ if ses_to_analyze:
                                 stage_func()
                         if preprocessing_type == 'HCP':
                             if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,text_output_format=args.text_output_format,level=1)
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=1)
             elif len(seed_ROI_name) == 1:
                 if preprocessing_type == 'HCP':
                     SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
@@ -525,7 +529,8 @@ if ses_to_analyze:
                         stage_func()
                 if preprocessing_type == 'HCP':
                     if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,text_output_format=args.text_output_format,level=1)
+                            if text_output_format == 'csv' or text_output_format == 'CSV':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=1)
     if level_2_foldername == 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined':
         # convert list to string expected by RestfMRILevel2.sh
         fmrinames = '@'.join(str(i) for i in fmrinames)
@@ -555,6 +560,11 @@ if ses_to_analyze:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                        pdb.set_trace()
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
             elif len(seed_ROI_name) == 1:
                 seed = seed_ROI_name[0]
             rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
@@ -599,6 +609,11 @@ if ses_to_analyze:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                        pdb.set_trace()
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
             elif len(seed_ROI_name) == 1:
                 seed = seed_ROI_name[0]
             rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
@@ -621,6 +636,10 @@ if ses_to_analyze:
         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
             if stage in args.stages:
                 stage_func()
+        if preprocessing_type == 'HCP':
+            if seed_analysis_output == 'parcellated':
+                if text_output_format == 'csv' or text_output_format == 'CSV':
+                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
 
 else:
     # initialize level 2 variables
@@ -774,7 +793,8 @@ else:
                         stage_func()
                 if preprocessing_type == 'HCP':
                     if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                            if text_output_format == 'csv' or text_output_format == 'CSV':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
             else:
                 for seed in seed_ROI_name:
                     if preprocessing_type == 'HCP':
@@ -843,7 +863,8 @@ else:
                             stage_func()
                     if preprocessing_type == 'HCP':
                         if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                            SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                            if text_output_format == 'csv' or text_output_format == 'CSV':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
         elif len(seed_ROI_name) == 1:
             if preprocessing_type == 'HCP':
                 SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
@@ -910,7 +931,8 @@ else:
                     stage_func()
             if preprocessing_type == 'HCP':
                 if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_format=args.text_output_format,level=1)
+                            if text_output_format == 'csv' or text_output_format == 'CSV':
+                                SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
     if level_2_foldername == 'sub-' + subject_label+ '_rsfMRI_combined':
         # convert list to string expected by RestfMRILevel2.sh
         fmrinames = '@'.join(str(i) for i in fmrinames)
@@ -940,7 +962,10 @@ else:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
-                       
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)                       
             elif len(seed_ROI_name) == 1:
                 seed = seed_ROI_name[0]
             rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
@@ -985,6 +1010,10 @@ else:
                         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                             if stage in args.stages:
                                 stage_func()
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)
                             
             elif len(seed_ROI_name) == 1:
                 seed = seed_ROI_name[0]
@@ -1007,3 +1036,7 @@ else:
         for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
             if stage in args.stages:
                 stage_func()
+        if preprocessing_type == 'HCP':
+            if seed_analysis_output == 'parcellated':
+                if text_output_format == 'csv' or text_output_format == 'CSV':
+                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)

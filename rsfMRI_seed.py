@@ -8,6 +8,7 @@ import pdb
 import fcntl as F
 import csv
 import numpy as np
+from glob import glob
 
 
 class SeedIO:
@@ -75,6 +76,7 @@ class SeedIO:
                      "COLUMN", 
                      os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + ".ptseries.nii"))
         cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name +".ptseries.nii"
+        self.cifti_file = cifti_file
         # does CIFTI file exist?
         try:
             read_cifti = open(cifti_file)
@@ -100,11 +102,12 @@ class SeedIO:
         print('\tregressor file: %s' %regressor_file_path)
         print('\n') 
         return regressor_file_path 
-    def create_text_output(self,ICAstring,text_output_dir,text_output_format,level):
+    def create_text_output(self,ICAstring,text_output_dir,level):
+        # find first level CORTADO folder for given participant and session
+        seed=self.regressor_file.split('-Regressor.txt')[0]
         print('\n')
         print('rsfMRI_seed.py: Create Text Output ')
         print('\t-Text output folder: %s' %str(text_output_dir))
-        print('\t-Text output format: %s'%str(text_output_format))
         print('\t-Cifti file: %s' %str(self.cifti_file))
         print('\t-Parcel file: %s' %str(self.parcel_file))
         print('\t-Parcel name: %s' %str(self.parcel_name))
@@ -113,106 +116,105 @@ class SeedIO:
         print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(ICAstring))
         print('\t-Analysis level to output data from: %s' %str(level))
         
-        # find first level CORTADO folder for given participant and session
-        seed=self.regressor_file.split('-Regressor.txt')[0]
-        if text_output_format == "CSV" or text_output_format == "csv":
-            # if file exists and subject and session have yet to be added, add to file
+        # if file exists and subject and session have yet to be added, add to file
+        if level == 1:
             output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
-            print('\t-Output file: %s' %str(output_text_file))
+        elif level == 2:
+            output_text_file = os.path.join(text_output_dir,"rsfMRI_combined_"+self.fmriname.split('_bold_')[1] + self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
+        print('\t-Output file: %s' %str(output_text_file))
         print('\n')
-        CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
-        zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
+        if level == 1:
+            CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
+            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
+        elif level == 2:
+            CORTADO_dir = glob(os.path.join(self.output_dir,"*_rsfMRI_combined_*.feat"))[0]
+            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats_fixedEffects","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
-        # set outputs suffixes
-        if text_output_format == "CSV" or text_output_format == "csv":
-            # if file exists and subject and session have yet to be added, add to file
-            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
-            # prevent race condition by using "try" statement
-            try:
-                read_output_text_file = open(output_text_file,'r')
-                read_output_text_file.close()
-            except:
-                # if doesn't exist create headers and add subject/session data to file
-                write_output_text_file = open(output_text_file,'w')
-            # file exists and is accessible, ensure that to be appended data does not yet exist on it
-            fieldnames = self.parcel_labels
-            # append subject and session ID to fieldname list
+        try:
+            read_output_text_file = open(output_text_file,'r')
+            read_output_text_file.close()
+        except:
+            # if doesn't exist create headers and add subject/session data to file
+            write_output_text_file = open(output_text_file,'w')
+        # file exists and is accessible, ensure that to be appended data does not yet exist on it
+        fieldnames = self.parcel_labels
+        # append subject and session ID to fieldname list
+        if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+            fieldnames.insert(0,'Session ID')
+        fieldnames.insert(0,'Subject ID')
+        
+        # if dataset is empty pandas will throw an error
+        try:     
+            output_text_file_df = pd.read_csv(output_text_file)
+            # find participant if it exists
+            row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
             if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-                fieldnames.insert(0,'Session ID')
-            fieldnames.insert(0,'Subject ID')
-            
-            # if dataset is empty pandas will throw an error
-            try:     
-                output_text_file_df = pd.read_csv(output_text_file)
-                # find participant if it exists
-                row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
-                if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-                    session_id = os.path.basename(self.output_dir).split('-')[1]
-                    row_data.insert(0,session_id)
-                    subject_id = self.output_dir.split('sub-')[1].split('/')[0]    
-                    row_data.insert(0,subject_id)
+                session_id = os.path.basename(self.output_dir).split('-')[1]
+                row_data.insert(0,session_id)
+                subject_id = self.output_dir.split('sub-')[1].split('/')[0]    
+                row_data.insert(0,subject_id)
+            else:
+                subject_id = os.path.basename(self.output_dir).split('-')[1]
+                row_data.insert(0,subject_id)
+            if session_id:
+                if len(output_text_file_df[output_text_file_df['Session ID']==int(session_id)]) == 0:
+                    append_output_text_file = open(output_text_file,'a')
+                    try:
+                        # try holding an exclusive lock first
+                        F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
+                    except IOError:
+                        raise IOError('flock() failed to hold an exclusive lock')
+                    writer = csv.writer(append_output_text_file)
+                    writer.writerow(row_data)
+                    # Unlock file
+                    try:
+                        F.flock(append_output_text_file, F.LOCK_UN)
+                        append_output_text_file.close()
+                    except IOError:
+                        raise IOError('flock() failed to unlock file.')
                 else:
-                    subject_id = os.path.basename(self.output_dir).split('-')[1]
-                    row_data.insert(0,subject_id)
-                if session_id:
-                    if len(output_text_file_df[output_text_file_df['Session ID']==int(session_id)]) == 0:
-                        append_output_text_file = open(output_text_file,'a')
-                        try:
-                            # try holding an exclusive lock first
-                            F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
-                        except IOError:
-                            raise IOError('flock() failed to hold an exclusive lock')
-                        writer = csv.writer(append_output_text_file)
-                        writer.writerow(row_data)
-                        # Unlock file
-                        try:
-                            F.flock(append_output_text_file, F.LOCK_UN)
-                            append_output_text_file.close()
-                        except IOError:
-                            raise IOError('flock() failed to unlock file.')
-                    else:
-                        print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
+                    print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
+            else:
+                if len(output_text_file_df[output_text_file_df['Subject ID']==int(subject_id)]) == 0:
+                    append_output_text_file = open(output_text_file,'a')
+                    try:
+                        # try holding an exclusive lock first
+                        F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
+                    except IOError:
+                        raise IOError('flock() failed to hold an exclusive lock')
+                    writer = csv.writer(append_output_text_file)
+                    writer.writerow(row_data)
+                    # Unlock file
+                    try:
+                        F.flock(append_output_text_file, F.LOCK_UN)
+                        append_output_text_file.close()
+                    except IOError:
+                        raise IOError('flock() failed to unlock file.')
                 else:
-                    if len(output_text_file_df[output_text_file_df['Subject ID']==int(subject_id)]) == 0:
-                        append_output_text_file = open(output_text_file,'a')
-                        try:
-                            # try holding an exclusive lock first
-                            F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
-                        except IOError:
-                            raise IOError('flock() failed to hold an exclusive lock')
-                        writer = csv.writer(append_output_text_file)
-                        writer.writerow(row_data)
-                        # Unlock file
-                        try:
-                            F.flock(append_output_text_file, F.LOCK_UN)
-                            append_output_text_file.close()
-                        except IOError:
-                            raise IOError('flock() failed to unlock file.')
-                    else:
-                        print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
-            except:
-                #add header and append data to file
-                write_output_text_file = open(output_text_file,'w')
-                try:
-                    # try holding an exclusive lock first
-                    F.flock(write_output_text_file, F.LOCK_EX | F.LOCK_NB)
-                except IOError:
-                    raise IOError('flock() failed to hold an exclusive lock')
-                writer = csv.writer(write_output_text_file)
-                row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
-                if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-                    row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
-                    row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
-                else:
-                    row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
-                writer.writerow(fieldnames)
-                writer.writerow(row_data)
-                # Unlock file
-                try:
-                    F.flock(write_output_text_file, F.LOCK_UN)
-                    write_output_text_file.close()
-                except IOError:
-                    raise IOError('flock() failed to unlock file.')
+                    print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
+        except:
+            #add header and append data to file
+            write_output_text_file = open(output_text_file,'w')
+            try:
+                # try holding an exclusive lock first
+                F.flock(write_output_text_file, F.LOCK_EX | F.LOCK_NB)
+            except IOError:
+                raise IOError('flock() failed to hold an exclusive lock')
+            writer = csv.writer(write_output_text_file)
+            row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
+            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+                row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
+                row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
+            else:
+                row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
+            writer.writerow(fieldnames)
+            writer.writerow(row_data)
+            # Unlock file
+            try:
+                F.flock(write_output_text_file, F.LOCK_UN)
+                write_output_text_file.close()
+            except IOError:
+                raise IOError('flock() failed to unlock file.')
                             
                     
                     
