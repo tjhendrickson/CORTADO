@@ -12,6 +12,7 @@ from functools import partial
 from collections import OrderedDict
 import pdb
 from rsfMRI_seed import SeedIO
+from multiprocessing import Pool
 
 
 def run(command, env={}, cwd=None):
@@ -131,6 +132,7 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
 parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='NONE')
+parser.add_argument('--n_cpus', help='Number of CPUs/cores available to use.',default=1, type=int)
 args = parser.parse_args()
 
 # global variables
@@ -148,6 +150,7 @@ selected_reg_name = args.reg_name
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 preprocessing_type = args.preprocessing_type
 motion_confounds = args.motion_confounds
+pool = Pool(processes=args.n_cpus)
 if preprocessing_type == 'HCP':
     if not motion_confounds == 'NONE':
         motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
@@ -173,20 +176,8 @@ else:
     ICAoutputs = 'NO'
 
 # check on arguments
-print('\n')
 print("Running CORTADO ")
-if args.participant_label:
-    subject_label=args.participant_label[0]
-    layout = BIDSLayout(os.path.join(args.input_dir,'sub-'+subject_label))
-    print('\t-Subject ID: %s' %str(args.participant_label))
-else:
-    raise ValueError('An argument must be specified for participant label. Exiting.')
-if args.session_label:
-    ses_to_analyze = args.session_label
-    print('\t-Session ID: %s' %str(args.session_label))
-else:
-    # if subject label has sessions underneath those need to be outputted into different directories
-    ses_to_analyze = layout.get_sessions(subject=subject_label)
+layout = BIDSLayout(os.path.join(args.input_dir))
 if args.seed_ROI_name:
     print('\t-Seed ROI selected: %s' %str(seed_ROI_name))
 else:
@@ -215,8 +206,10 @@ print('\t-Use mixed effects if multiple of same acquisition: %s' %str(args.combi
 print('\t-Text output format: %s' %str(args.text_output_format))
 print('\n')
 
-if ses_to_analyze:
-    for ses_label in ses_to_analyze:
+def run_CORTADO(scanning_session):
+    if layout.get(session=scanning_session,target='subject',return_type='id') > 0:
+        subject_label = layout.get(session=scanning_session,target='subject',return_type='id')[0]
+        ses_label=scanning_session
         # initialize level 2 variables
         if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
             level_2_foldername = 'NONE'
@@ -233,8 +226,7 @@ if ses_to_analyze:
                                                             extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
                 else:
                     bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,type='clean',
-                                                            extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
-                
+                                                            extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]        
             # do not use ICA outputs
             else:
                 ICAstring=""
@@ -244,8 +236,6 @@ if ses_to_analyze:
                 else:
                     bolds = [f.filename for f in layout.get(subject=subject_label, session=ses_label,
                                                             extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
-                
-
         elif preprocessing_type == 'fmriprep':
             #use ICA outputs
             if ICAoutputs == 'YES':
@@ -531,206 +521,312 @@ if ses_to_analyze:
                     if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
                             if text_output_format == 'csv' or text_output_format == 'CSV':
                                 SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=1)
-    if level_2_foldername == 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined':
-        # convert list to string expected by RestfMRILevel2.sh
-        fmrinames = '@'.join(str(i) for i in fmrinames)
-        if seed_analysis_output == 'dense':
-            if len(seed_ROI_name) > 1:
-                if seed_handling == "together":
-                    seed = seed_ROI_merged_string
-                else:
-                    for seed in seed_ROI_name:
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                    outdir=outdir,
-                                                                    fmriname=level_2_foldername,
-                                                                    highpass=highpass,
-                                                                    fmrires=fmrires)),
-                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                    outdir=outdir,
-                                                                    pipeline=preprocessing_type,
-                                                                    ICAstring=ICAstring,
-                                                                    fmrifilename=fmrinames,
-                                                                    level_2_foldername=level_2_foldername,
-                                                                    smoothing=smoothing,
-                                                                    temporal_filter=highpass,
-                                                                    regname=selected_reg_name,
-                                                                    parcel_name="NONE",
-                                                                    seedROI=seed))])
+        if level_2_foldername == 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined':
+            # convert list to string expected by RestfMRILevel2.sh
+            fmrinames = '@'.join(str(i) for i in fmrinames)
+            if seed_analysis_output == 'dense':
+                if len(seed_ROI_name) > 1:
+                    if seed_handling == "together":
+                        seed = seed_ROI_merged_string
+                    else:
+                        for seed in seed_ROI_name:
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=level_2_foldername,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                                        ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        pipeline=preprocessing_type,
+                                                                        ICAstring=ICAstring,
+                                                                        fmrifilename=fmrinames,
+                                                                        level_2_foldername=level_2_foldername,
+                                                                        smoothing=smoothing,
+                                                                        temporal_filter=highpass,
+                                                                        regname=selected_reg_name,
+                                                                        parcel_name="NONE",
+                                                                        seedROI=seed))])
 
-                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-                            if stage in args.stages:
-                                stage_func()
-                        pdb.set_trace()
-                        if preprocessing_type == 'HCP':
-                            if seed_analysis_output == 'parcellated':
-                                if text_output_format == 'csv' or text_output_format == 'CSV':
-                                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
-            elif len(seed_ROI_name) == 1:
-                seed = seed_ROI_name[0]
-            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                    outdir=outdir,
-                                                                    fmriname=level_2_foldername,
-                                                                    highpass=highpass,
-                                                                    fmrires=fmrires)),
-                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                    outdir=outdir,
-                                                                    pipeline=preprocessing_type,
-                                                                    ICAstring=ICAstring,
-                                                                    fmrifilename=fmrinames,
-                                                                    level_2_foldername=level_2_foldername,
-                                                                    smoothing=smoothing,
-                                                                    temporal_filter=highpass,
-                                                                    regname=selected_reg_name,
-                                                                    parcel_name="NONE",
-                                                                    seedROI=seed))])
-        else:
-            if len(seed_ROI_name) > 1:
-                if seed_handling == "together":
-                    seed = seed_ROI_merged_string
-                else:
-                    for seed in seed_ROI_name:
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                    outdir=outdir,
-                                                                    fmriname=level_2_foldername,
-                                                                    highpass=highpass,
-                                                                    fmrires=fmrires)),
-                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                    outdir=outdir,
-                                                                    pipeline=preprocessing_type,
-                                                                    ICAstring=ICAstring,
-                                                                    fmrifilename=fmrinames,
-                                                                    level_2_foldername=level_2_foldername,
-                                                                    smoothing=smoothing,
-                                                                    temporal_filter=highpass,
-                                                                    regname=selected_reg_name,
-                                                                    parcel_name=parcel_name,
-                                                                    seedROI=seed))])
+                            for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                                if stage in args.stages:
+                                    stage_func()
+                            pdb.set_trace()
+                            if preprocessing_type == 'HCP':
+                                if seed_analysis_output == 'parcellated':
+                                    if text_output_format == 'csv' or text_output_format == 'CSV':
+                                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
+                elif len(seed_ROI_name) == 1:
+                    seed = seed_ROI_name[0]
+                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=level_2_foldername,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                                        ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        pipeline=preprocessing_type,
+                                                                        ICAstring=ICAstring,
+                                                                        fmrifilename=fmrinames,
+                                                                        level_2_foldername=level_2_foldername,
+                                                                        smoothing=smoothing,
+                                                                        temporal_filter=highpass,
+                                                                        regname=selected_reg_name,
+                                                                        parcel_name="NONE",
+                                                                        seedROI=seed))])
+            else:
+                if len(seed_ROI_name) > 1:
+                    if seed_handling == "together":
+                        seed = seed_ROI_merged_string
+                    else:
+                        for seed in seed_ROI_name:
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=level_2_foldername,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                                        ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        pipeline=preprocessing_type,
+                                                                        ICAstring=ICAstring,
+                                                                        fmrifilename=fmrinames,
+                                                                        level_2_foldername=level_2_foldername,
+                                                                        smoothing=smoothing,
+                                                                        temporal_filter=highpass,
+                                                                        regname=selected_reg_name,
+                                                                        parcel_name=parcel_name,
+                                                                        seedROI=seed))])
 
-                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-                            if stage in args.stages:
-                                stage_func()
-                        pdb.set_trace()
-                        if preprocessing_type == 'HCP':
-                            if seed_analysis_output == 'parcellated':
-                                if text_output_format == 'csv' or text_output_format == 'CSV':
-                                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
-            elif len(seed_ROI_name) == 1:
-                seed = seed_ROI_name[0]
-            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                    outdir=outdir,
-                                                                    fmriname=level_2_foldername,
-                                                                    highpass=highpass,
-                                                                    fmrires=fmrires)),
-                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                    outdir=outdir,
-                                                                    pipeline=preprocessing_type,
-                                                                    ICAstring=ICAstring,
-                                                                    fmrifilename=fmrinames,
-                                                                    level_2_foldername=level_2_foldername,
-                                                                    smoothing=smoothing,
-                                                                    temporal_filter=highpass,
-                                                                    regname=selected_reg_name,
-                                                                    parcel_name=parcel_name,
-                                                                    seedROI=seed))])
-
-        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-            if stage in args.stages:
-                stage_func()
-        if preprocessing_type == 'HCP':
-            if seed_analysis_output == 'parcellated':
-                if text_output_format == 'csv' or text_output_format == 'CSV':
-                    SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
-
-else:
-    # initialize level 2 variables
-    if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
-        level_2_foldername = 'NONE'
+                            for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                                if stage in args.stages:
+                                    stage_func()
     else:
-        level_2_foldername = 'sub-' + subject_label+ '_rsfMRI_combined'
-    outdir=args.output_dir + "/sub-%s" % (subject_label)
-    # retrieve preprocessing BIDS layout for participant specified
-    if preprocessing_type == 'HCP':
-        # use ICA outputs
-        if ICAoutputs == 'YES':
-            ICAstring="_FIXclean"
-            if selected_reg_name == msm_all_reg_name:
-                bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
-                                                        extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
-            else:
-                bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
-                                                        extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
-        # do not use ICA outputs
+        # initialize level 2 variables
+        if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
+            level_2_foldername = 'NONE'
         else:
-            ICAstring=""
-            if selected_reg_name == msm_all_reg_name:
-                bolds = [f.filename for f in layout.get(subject=subject_label,
-                                                        extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
-            else:
-                bolds = [f.filename for f in layout.get(subject=subject_label,
-                                                        extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
-
-    elif preprocessing_type == 'fmriprep':
-        #use ICA outputs
-        if ICAoutputs == 'YES':
-            ICAstring="_AROMAclean"
-            bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
-        # do not use ICA outputs
-        else:
-            ICAstring=""
-            bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'preproc' in f.filename]
-        bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
-    for idx,fmritcs in enumerate(bolds):
+            level_2_foldername = 'sub-' + subject_label+ '_rsfMRI_combined'
+        outdir=args.output_dir + "/sub-%s" % (subject_label)
+        # retrieve preprocessing BIDS layout for participant specified
         if preprocessing_type == 'HCP':
+            # use ICA outputs
             if ICAoutputs == 'YES':
+                ICAstring="_FIXclean"
                 if selected_reg_name == msm_all_reg_name:
-                    vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                    bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
+                                                            extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
                 else:
-                    vol_fmritcs=fmritcs.replace('_Atlas_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                    bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
+                                                            extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+            # do not use ICA outputs
             else:
+                ICAstring=""
                 if selected_reg_name == msm_all_reg_name:
-                    vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
+                    bolds = [f.filename for f in layout.get(subject=subject_label,
+                                                            extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
                 else:
-                    vol_fmritcs = fmritcs.replace('_Atlas_hp2000.dtseries.nii','_hp2000.nii.gz')
+                    bolds = [f.filename for f in layout.get(subject=subject_label,
+                                                            extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
 
-            zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
-            fmrires = str(int(min(zooms[:3])))
-            shortfmriname=fmritcs.split("/")[-2]
-            # create confounds if dvars or fd selected
-            if motion_confounds_filename == 'Movement_dvars.txt':
-                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
-                        " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                        ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --dvars")
-            elif motion_confounds_filename == 'Movement_fd.txt':
-                os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
-                            " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
-                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --fd")
-            # create full path to confounds file if not 'NONE'
-            if motion_confounds_filename != 'NONE' and ICAoutputs == 'YES':
-                if selected_reg_name == msm_all_reg_name:
-                    motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii',motion_confounds_filename)
-                else:
-                    motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_hp2000_clean.dtseries.nii',motion_confounds_filename)
-            elif motion_confounds_filename != 'NONE' and ICAoutputs == 'NO':
-                if selected_reg_name == msm_all_reg_name:
-                    motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii',motion_confounds_filename)
-                else:
-                    motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_hp2000.dtseries.nii',motion_confounds_filename)
-
-            AtlasFolder='/'.join(fmritcs.split("/")[0:4])
-            fmriname = fmritcs.path.basename.split(".")[0]
-            assert fmriname
-            bold_ref = "NONE"
         elif preprocessing_type == 'fmriprep':
-            bold_ref = bolds_ref[idx]
-            vol_fmritcs="NONE"
-        if len(seed_ROI_name) > 1:
-            if seed_handling == "together":
+            #use ICA outputs
+            if ICAoutputs == 'YES':
+                ICAstring="_AROMAclean"
+                bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
+            # do not use ICA outputs
+            else:
+                ICAstring=""
+                bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'preproc' in f.filename]
+            bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
+        for idx,fmritcs in enumerate(bolds):
+            if preprocessing_type == 'HCP':
+                if ICAoutputs == 'YES':
+                    if selected_reg_name == msm_all_reg_name:
+                        vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                    else:
+                        vol_fmritcs=fmritcs.replace('_Atlas_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                else:
+                    if selected_reg_name == msm_all_reg_name:
+                        vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
+                    else:
+                        vol_fmritcs = fmritcs.replace('_Atlas_hp2000.dtseries.nii','_hp2000.nii.gz')
+
+                zooms = nibabel.load(vol_fmritcs).get_header().get_zooms()
+                fmrires = str(int(min(zooms[:3])))
+                shortfmriname=fmritcs.split("/")[-2]
+                # create confounds if dvars or fd selected
+                if motion_confounds_filename == 'Movement_dvars.txt':
+                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
+                            " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                            ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --dvars")
+                elif motion_confounds_filename == 'Movement_fd.txt':
+                    os.system("${FSL_DIR}/bin/fsl_motion_outliers -i " + vol_fmritcs + \
+                                " -o " + outdir + "/sub-" + subject_label + "/ses-" + \
+                                ses_label + "/MNINonLinear/" + "Results/" + shortfmriname + "/" + motion_confounds_filename + " --fd")
+                # create full path to confounds file if not 'NONE'
+                if motion_confounds_filename != 'NONE' and ICAoutputs == 'YES':
+                    if selected_reg_name == msm_all_reg_name:
+                        motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii',motion_confounds_filename)
+                    else:
+                        motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_hp2000_clean.dtseries.nii',motion_confounds_filename)
+                elif motion_confounds_filename != 'NONE' and ICAoutputs == 'NO':
+                    if selected_reg_name == msm_all_reg_name:
+                        motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii',motion_confounds_filename)
+                    else:
+                        motion_confounds_filepath = fmritcs.replace(shortfmriname+'_Atlas_hp2000.dtseries.nii',motion_confounds_filename)
+
+                AtlasFolder='/'.join(fmritcs.split("/")[0:4])
+                fmriname = fmritcs.path.basename.split(".")[0]
+                assert fmriname
+                bold_ref = "NONE"
+            elif preprocessing_type == 'fmriprep':
+                bold_ref = bolds_ref[idx]
+                vol_fmritcs="NONE"
+            if len(seed_ROI_name) > 1:
+                if seed_handling == "together":
+                    if preprocessing_type == 'HCP':
+                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name)
+                        regressor_file = SeedIO_init.write_regressor()
+                        seed_ROI_merged_string = os.path.basename(regressor_file).split('-Regressor.txt')[0]
+                    elif preprocessing_type == 'fmriprep':
+                        pass
+                    if not regressor_file:
+                        raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                    if seed_analysis_output == 'dense':
+                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                            outdir=outdir,
+                                                                            fmriname=fmriname,
+                                                                            highpass=highpass,
+                                                                            fmrires=fmrires)),
+                                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                            outdir=outdir,
+                                                                            DownSampleFolder=DownSampleFolder,
+                                                                            ResultsFolder=ResultsFolder,
+                                                                            ROIsFolder=ROIsFolder,
+                                                                            pipeline=preprocessing_type,
+                                                                            ICAstring=ICAstring,
+                                                                            finalfile=fmritcs,
+                                                                            vol_finalfile=vol_fmritcs,
+                                                                            bold_ref=bold_ref,
+                                                                            fmrifilename=fmriname,
+                                                                            fmrifoldername=shortfmriname,
+                                                                            lowresmesh=lowresmesh,
+                                                                            fmrires=fmrires,
+                                                                            smoothing=smoothing,
+                                                                            temporal_filter=highpass,
+                                                                            confound=motion_confounds_filepath,
+                                                                            parcel_file="NONE",
+                                                                            parcel_name="NONE",
+                                                                            regname=selected_reg_name,
+                                                                            seedROI=seed_ROI_merged_string))])
+                    else:
+                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                            outdir=outdir,
+                                                                            fmriname=fmriname,
+                                                                            highpass=highpass,
+                                                                            fmrires=fmrires)),
+                                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                            outdir=outdir,
+                                                                            DownSampleFolder=DownSampleFolder,
+                                                                            ResultsFolder=ResultsFolder,
+                                                                            ROIsFolder=ROIsFolder,
+                                                                            pipeline=preprocessing_type,
+                                                                            ICAstring=ICAstring,
+                                                                            finalfile=fmritcs,
+                                                                            vol_finalfile=vol_fmritcs,
+                                                                            bold_ref=bold_ref,
+                                                                            fmrifilename=fmriname,
+                                                                            fmrifoldername=shortfmriname,
+                                                                            lowresmesh=lowresmesh,
+                                                                            fmrires=fmrires,
+                                                                            smoothing=smoothing,
+                                                                            temporal_filter=highpass,
+                                                                            confound=motion_confounds_filepath,
+                                                                            parcel_file=parcel_file,
+                                                                            parcel_name=parcel_name,
+                                                                            regname=selected_reg_name,
+                                                                            seedROI=seed_ROI_merged_string))])
+
+                    for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                        if stage in args.stages:
+                            stage_func()
+                    if preprocessing_type == 'HCP':
+                        if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
+                else:
+                    for seed in seed_ROI_name:
+                        if preprocessing_type == 'HCP':
+                            SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed)
+                            regressor_file = SeedIO_init.write_regressor()
+                        elif preprocessing_type == 'fmriprep':
+                            pass
+                        if not regressor_file:
+                            raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                        if seed_analysis_output == 'dense':
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=fmriname,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        DownSampleFolder=DownSampleFolder,
+                                                                        ResultsFolder=ResultsFolder,
+                                                                        ROIsFolder=ROIsFolder,
+                                                                        pipeline=preprocessing_type,
+                                                                        vol_finalfile=vol_fmritcs,
+                                                                        ICAstring=ICAstring,
+                                                                        finalfile=fmritcs,
+                                                                        bold_ref = bolds_ref[idx],
+                                                                        fmrifilename=fmriname,
+                                                                        fmrifoldername=shortfmriname,
+                                                                        lowresmesh=lowresmesh,
+                                                                        fmrires=fmrires,
+                                                                        smoothing=smoothing,
+                                                                        confound=motion_confounds_filepath,
+                                                                        temporal_filter=highpass,
+                                                                        parcel_file="NONE",
+                                                                        parcel_name="NONE",
+                                                                        regname=selected_reg_name,
+                                                                        seedROI=seed))])
+                        else:
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=fmriname,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        DownSampleFolder=DownSampleFolder,
+                                                                        ResultsFolder=ResultsFolder,
+                                                                        ROIsFolder=ROIsFolder,
+                                                                        pipeline=preprocessing_type,
+                                                                        vol_finalfile=vol_fmritcs,
+                                                                        ICAstring=ICAstring,
+                                                                        finalfile=fmritcs,
+                                                                        bold_ref = bolds_ref[idx],
+                                                                        fmrifilename=fmriname,
+                                                                        fmrifoldername=shortfmriname,
+                                                                        lowresmesh=lowresmesh,
+                                                                        fmrires=fmrires,
+                                                                        smoothing=smoothing,
+                                                                        confound=motion_confounds_filepath,
+                                                                        temporal_filter=highpass,
+                                                                        parcel_file=parcel_file,
+                                                                        parcel_name=parcel_name,
+                                                                        regname=selected_reg_name,
+                                                                        seedROI=seed))])
+                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                            if stage in args.stages:
+                                stage_func()
+                        if preprocessing_type == 'HCP':
+                            if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
+            elif len(seed_ROI_name) == 1:
                 if preprocessing_type == 'HCP':
-                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name)
+                    SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
                     regressor_file = SeedIO_init.write_regressor()
-                    seed_ROI_merged_string = os.path.basename(regressor_file).split('-Regressor.txt')[0]
-                elif preprocessing_type == 'fmriprep':
-                    pass
                 if not regressor_file:
                     raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
                 if seed_analysis_output == 'dense':
@@ -739,304 +835,196 @@ else:
                                                                         fmriname=fmriname,
                                                                         highpass=highpass,
                                                                         fmrires=fmrires)),
-                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
                                                                         outdir=outdir,
                                                                         DownSampleFolder=DownSampleFolder,
                                                                         ResultsFolder=ResultsFolder,
                                                                         ROIsFolder=ROIsFolder,
                                                                         pipeline=preprocessing_type,
                                                                         ICAstring=ICAstring,
-                                                                        finalfile=fmritcs,
                                                                         vol_finalfile=vol_fmritcs,
-                                                                        bold_ref=bold_ref,
+                                                                        finalfile=fmritcs,
+                                                                        bold_ref = bolds_ref[idx],
                                                                         fmrifilename=fmriname,
                                                                         fmrifoldername=shortfmriname,
                                                                         lowresmesh=lowresmesh,
                                                                         fmrires=fmrires,
                                                                         smoothing=smoothing,
-                                                                        temporal_filter=highpass,
                                                                         confound=motion_confounds_filepath,
+                                                                        temporal_filter=highpass,
                                                                         parcel_file="NONE",
                                                                         parcel_name="NONE",
                                                                         regname=selected_reg_name,
-                                                                        seedROI=seed_ROI_merged_string))])
+                                                                        seedROI=seed_ROI_name[0]))])
+
                 else:
                     rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
                                                                         outdir=outdir,
                                                                         fmriname=fmriname,
                                                                         highpass=highpass,
                                                                         fmrires=fmrires)),
-                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
                                                                         outdir=outdir,
                                                                         DownSampleFolder=DownSampleFolder,
                                                                         ResultsFolder=ResultsFolder,
                                                                         ROIsFolder=ROIsFolder,
                                                                         pipeline=preprocessing_type,
                                                                         ICAstring=ICAstring,
-                                                                        finalfile=fmritcs,
                                                                         vol_finalfile=vol_fmritcs,
-                                                                        bold_ref=bold_ref,
+                                                                        finalfile=fmritcs,
+                                                                        bold_ref = bolds_ref[idx],
                                                                         fmrifilename=fmriname,
                                                                         fmrifoldername=shortfmriname,
                                                                         lowresmesh=lowresmesh,
                                                                         fmrires=fmrires,
                                                                         smoothing=smoothing,
-                                                                        temporal_filter=highpass,
                                                                         confound=motion_confounds_filepath,
+                                                                        temporal_filter=highpass,
                                                                         parcel_file=parcel_file,
                                                                         parcel_name=parcel_name,
                                                                         regname=selected_reg_name,
-                                                                        seedROI=seed_ROI_merged_string))])
-
+                                                                        seedROI=seed_ROI_name[0]))])
                 for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                     if stage in args.stages:
                         stage_func()
                 if preprocessing_type == 'HCP':
                     if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                            if text_output_format == 'csv' or text_output_format == 'CSV':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
-            else:
-                for seed in seed_ROI_name:
-                    if preprocessing_type == 'HCP':
-                        SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed)
-                        regressor_file = SeedIO_init.write_regressor()
-                    elif preprocessing_type == 'fmriprep':
-                        pass
-                    if not regressor_file:
-                        raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
-                    if seed_analysis_output == 'dense':
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
-                                                                    outdir=outdir,
-                                                                    fmriname=fmriname,
-                                                                    highpass=highpass,
-                                                                    fmrires=fmrires)),
-                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
-                                                                    outdir=outdir,
-                                                                    DownSampleFolder=DownSampleFolder,
-                                                                    ResultsFolder=ResultsFolder,
-                                                                    ROIsFolder=ROIsFolder,
-                                                                    pipeline=preprocessing_type,
-                                                                    vol_finalfile=vol_fmritcs,
-                                                                    ICAstring=ICAstring,
-                                                                    finalfile=fmritcs,
-                                                                    bold_ref = bolds_ref[idx],
-                                                                    fmrifilename=fmriname,
-                                                                    fmrifoldername=shortfmriname,
-                                                                    lowresmesh=lowresmesh,
-                                                                    fmrires=fmrires,
-                                                                    smoothing=smoothing,
-                                                                    confound=motion_confounds_filepath,
-                                                                    temporal_filter=highpass,
-                                                                    parcel_file="NONE",
-                                                                    parcel_name="NONE",
-                                                                    regname=selected_reg_name,
-                                                                    seedROI=seed))])
-                    else:
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
-                                                                    outdir=outdir,
-                                                                    fmriname=fmriname,
-                                                                    highpass=highpass,
-                                                                    fmrires=fmrires)),
-                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
-                                                                    outdir=outdir,
-                                                                    DownSampleFolder=DownSampleFolder,
-                                                                    ResultsFolder=ResultsFolder,
-                                                                    ROIsFolder=ROIsFolder,
-                                                                    pipeline=preprocessing_type,
-                                                                    vol_finalfile=vol_fmritcs,
-                                                                    ICAstring=ICAstring,
-                                                                    finalfile=fmritcs,
-                                                                    bold_ref = bolds_ref[idx],
-                                                                    fmrifilename=fmriname,
-                                                                    fmrifoldername=shortfmriname,
-                                                                    lowresmesh=lowresmesh,
-                                                                    fmrires=fmrires,
-                                                                    smoothing=smoothing,
-                                                                    confound=motion_confounds_filepath,
-                                                                    temporal_filter=highpass,
-                                                                    parcel_file=parcel_file,
-                                                                    parcel_name=parcel_name,
-                                                                    regname=selected_reg_name,
-                                                                    seedROI=seed))])
-                    for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-                        if stage in args.stages:
-                            stage_func()
-                    if preprocessing_type == 'HCP':
-                        if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                            if text_output_format == 'csv' or text_output_format == 'CSV':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
-        elif len(seed_ROI_name) == 1:
-            if preprocessing_type == 'HCP':
-                SeedIO_init = SeedIO(outdir,fmritcs, parcel_file, parcel_name, seed_ROI_name[0])
-                regressor_file = SeedIO_init.write_regressor()
-            if not regressor_file:
-                raise Exception("variable 'regressor_file' does not exist. Something failed within rsfMRI_seed.py. Must exit")
+                                if text_output_format == 'csv' or text_output_format == 'CSV':
+                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
+        if level_2_foldername == 'sub-' + subject_label+ '_rsfMRI_combined':
+            # convert list to string expected by RestfMRILevel2.sh
+            fmrinames = '@'.join(str(i) for i in fmrinames)
             if seed_analysis_output == 'dense':
-                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                if len(seed_ROI_name) > 1:
+                    if seed_handling == "together":
+                        seed = seed_ROI_merged_string
+                    else:
+                        for seed in seed_ROI_name:
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
                                                                     outdir=outdir,
-                                                                    fmriname=fmriname,
+                                                                    fmriname=level_2_foldername,
                                                                     highpass=highpass,
                                                                     fmrires=fmrires)),
-                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                     outdir=outdir,
-                                                                    DownSampleFolder=DownSampleFolder,
-                                                                    ResultsFolder=ResultsFolder,
-                                                                    ROIsFolder=ROIsFolder,
                                                                     pipeline=preprocessing_type,
                                                                     ICAstring=ICAstring,
-                                                                    vol_finalfile=vol_fmritcs,
-                                                                    finalfile=fmritcs,
-                                                                    bold_ref = bolds_ref[idx],
-                                                                    fmrifilename=fmriname,
-                                                                    fmrifoldername=shortfmriname,
-                                                                    lowresmesh=lowresmesh,
-                                                                    fmrires=fmrires,
+                                                                    fmrifilename=fmrinames,
+                                                                    level_2_foldername=level_2_foldername,
                                                                     smoothing=smoothing,
-                                                                    confound=motion_confounds_filepath,
                                                                     temporal_filter=highpass,
-                                                                    parcel_file="NONE",
+                                                                    regname=selected_reg_name,
                                                                     parcel_name="NONE",
-                                                                    regname=selected_reg_name,
-                                                                    seedROI=seed_ROI_name[0]))])
+                                                                    seedROI=seed))])
 
-            else:
-                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level1_processing,
+                            for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                                if stage in args.stages:
+                                    stage_func()
+                            if preprocessing_type == 'HCP':
+                                if seed_analysis_output == 'parcellated':
+                                    if text_output_format == 'csv' or text_output_format == 'CSV':
+                                        SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)                       
+                elif len(seed_ROI_name) == 1:
+                    seed = seed_ROI_name[0]
+                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
                                                                     outdir=outdir,
-                                                                    fmriname=fmriname,
+                                                                    fmriname=level_2_foldername,
                                                                     highpass=highpass,
                                                                     fmrires=fmrires)),
-                                            ("rsfMRISeedAnalysis", partial(run_seed_level1_rsfMRI_processing,
+                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
                                                                     outdir=outdir,
-                                                                    DownSampleFolder=DownSampleFolder,
-                                                                    ResultsFolder=ResultsFolder,
-                                                                    ROIsFolder=ROIsFolder,
                                                                     pipeline=preprocessing_type,
                                                                     ICAstring=ICAstring,
-                                                                    vol_finalfile=vol_fmritcs,
-                                                                    finalfile=fmritcs,
-                                                                    bold_ref = bolds_ref[idx],
-                                                                    fmrifilename=fmriname,
-                                                                    fmrifoldername=shortfmriname,
-                                                                    lowresmesh=lowresmesh,
-                                                                    fmrires=fmrires,
+                                                                    fmrifilename=fmrinames,
+                                                                    level_2_foldername=level_2_foldername,
                                                                     smoothing=smoothing,
-                                                                    confound=motion_confounds_filepath,
                                                                     temporal_filter=highpass,
-                                                                    parcel_file=parcel_file,
-                                                                    parcel_name=parcel_name,
                                                                     regname=selected_reg_name,
-                                                                    seedROI=seed_ROI_name[0]))])
+                                                                    parcel_name="NONE",
+                                                                    seedROI=seed))])
+            else:
+                if len(seed_ROI_name) > 1:
+                    if seed_handling == "together":
+                        seed = seed_ROI_merged_string
+                    else:
+                        for seed in seed_ROI_name:
+                            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+                                                                    outdir=outdir,
+                                                                    fmriname=level_2_foldername,
+                                                                    highpass=highpass,
+                                                                    fmrires=fmrires)),
+                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
+                                                                    outdir=outdir,
+                                                                    pipeline=preprocessing_type,
+                                                                    ICAstring=ICAstring,
+                                                                    fmrifilename=fmrinames,
+                                                                    level_2_foldername=level_2_foldername,
+                                                                    smoothing=smoothing,
+                                                                    temporal_filter=highpass,
+                                                                    regname=selected_reg_name,
+                                                                    parcel_name=parcel_name,
+                                                                    seedROI=seed))])
+
+                            for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                                if stage in args.stages:
+                                    stage_func()
+                            if preprocessing_type == 'HCP':
+                                if seed_analysis_output == 'parcellated':
+                                    if text_output_format == 'csv' or text_output_format == 'CSV':
+                                        SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)
+                                
+                elif len(seed_ROI_name) == 1:
+                    seed = seed_ROI_name[0]
+                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+                                                                    outdir=outdir,
+                                                                    fmriname=level_2_foldername,
+                                                                    highpass=highpass,
+                                                                    fmrires=fmrires)),
+                                                    ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
+                                                                    outdir=outdir,
+                                                                    pipeline=preprocessing_type,
+                                                                    ICAstring=ICAstring,
+                                                                    fmrifilename=fmrinames,
+                                                                    level_2_foldername=level_2_foldername,
+                                                                    smoothing=smoothing,
+                                                                    temporal_filter=highpass,
+                                                                    regname=selected_reg_name,
+                                                                    parcel_name=parcel_name,
+                                                                    seedROI=seed))])
             for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                 if stage in args.stages:
                     stage_func()
             if preprocessing_type == 'HCP':
-                if level_2_foldername == 'NONE' and seed_analysis_output == 'parcellated':
-                            if text_output_format == 'csv' or text_output_format == 'CSV':
-                                SeedIO_init.create_text_output(ICAstring=ICAstring,level=1)
-    if level_2_foldername == 'sub-' + subject_label+ '_rsfMRI_combined':
-        # convert list to string expected by RestfMRILevel2.sh
-        fmrinames = '@'.join(str(i) for i in fmrinames)
-        if seed_analysis_output == 'dense':
-            if len(seed_ROI_name) > 1:
-                if seed_handling == "together":
-                    seed = seed_ROI_merged_string
-                else:
-                    for seed in seed_ROI_name:
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                outdir=outdir,
-                                                                fmriname=level_2_foldername,
-                                                                highpass=highpass,
-                                                                fmrires=fmrires)),
-                                                ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                outdir=outdir,
-                                                                pipeline=preprocessing_type,
-                                                                ICAstring=ICAstring,
-                                                                fmrifilename=fmrinames,
-                                                                level_2_foldername=level_2_foldername,
-                                                                smoothing=smoothing,
-                                                                temporal_filter=highpass,
-                                                                regname=selected_reg_name,
-                                                                parcel_name="NONE",
-                                                                seedROI=seed))])
+                if seed_analysis_output == 'parcellated':
+                    if text_output_format == 'csv' or text_output_format == 'CSV':
+                        SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)[0]
+                rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
+                                                                        outdir=outdir,
+                                                                        fmriname=level_2_foldername,
+                                                                        highpass=highpass,
+                                                                        fmrires=fmrires)),
+                                                        ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
+                                                                        outdir=outdir,
+                                                                        pipeline=preprocessing_type,
+                                                                        ICAstring=ICAstring,
+                                                                        fmrifilename=fmrinames,
+                                                                        level_2_foldername=level_2_foldername,
+                                                                        smoothing=smoothing,
+                                                                        temporal_filter=highpass,
+                                                                        regname=selected_reg_name,
+                                                                        parcel_name=parcel_name,
+                                                                        seedROI=seed))])
 
-                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-                            if stage in args.stages:
-                                stage_func()
-                        if preprocessing_type == 'HCP':
-                            if seed_analysis_output == 'parcellated':
-                                if text_output_format == 'csv' or text_output_format == 'CSV':
-                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)                       
-            elif len(seed_ROI_name) == 1:
-                seed = seed_ROI_name[0]
-            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                outdir=outdir,
-                                                                fmriname=level_2_foldername,
-                                                                highpass=highpass,
-                                                                fmrires=fmrires)),
-                                                ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                outdir=outdir,
-                                                                pipeline=preprocessing_type,
-                                                                ICAstring=ICAstring,
-                                                                fmrifilename=fmrinames,
-                                                                level_2_foldername=level_2_foldername,
-                                                                smoothing=smoothing,
-                                                                temporal_filter=highpass,
-                                                                regname=selected_reg_name,
-                                                                parcel_name="NONE",
-                                                                seedROI=seed))])
-        else:
-            if len(seed_ROI_name) > 1:
-                if seed_handling == "together":
-                    seed = seed_ROI_merged_string
-                else:
-                    for seed in seed_ROI_name:
-                        rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                outdir=outdir,
-                                                                fmriname=level_2_foldername,
-                                                                highpass=highpass,
-                                                                fmrires=fmrires)),
-                                                ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                outdir=outdir,
-                                                                pipeline=preprocessing_type,
-                                                                ICAstring=ICAstring,
-                                                                fmrifilename=fmrinames,
-                                                                level_2_foldername=level_2_foldername,
-                                                                smoothing=smoothing,
-                                                                temporal_filter=highpass,
-                                                                regname=selected_reg_name,
-                                                                parcel_name=parcel_name,
-                                                                seedROI=seed))])
+            for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
+                if stage in args.stages:
+                    stage_func()
+            if preprocessing_type == 'HCP':
+                if seed_analysis_output == 'parcellated':
+                    if text_output_format == 'csv' or text_output_format == 'CSV':
+                        SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
 
-                        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-                            if stage in args.stages:
-                                stage_func()
-                        if preprocessing_type == 'HCP':
-                            if seed_analysis_output == 'parcellated':
-                                if text_output_format == 'csv' or text_output_format == 'CSV':
-                                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)
-                            
-            elif len(seed_ROI_name) == 1:
-                seed = seed_ROI_name[0]
-            rsfMRI_seed_stages_dict = OrderedDict([("Generatefsf", partial(run_Generatefsf_level2_processing,
-                                                                outdir=outdir,
-                                                                fmriname=level_2_foldername,
-                                                                highpass=highpass,
-                                                                fmrires=fmrires)),
-                                                ("rsfMRISeedAnalysis", partial(run_seed_level2_rsfMRI_processing,
-                                                                outdir=outdir,
-                                                                pipeline=preprocessing_type,
-                                                                ICAstring=ICAstring,
-                                                                fmrifilename=fmrinames,
-                                                                level_2_foldername=level_2_foldername,
-                                                                smoothing=smoothing,
-                                                                temporal_filter=highpass,
-                                                                regname=selected_reg_name,
-                                                                parcel_name=parcel_name,
-                                                                seedROI=seed))])
-        for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
-            if stage in args.stages:
-                stage_func()
-        if preprocessing_type == 'HCP':
-            if seed_analysis_output == 'parcellated':
-                if text_output_format == 'csv' or text_output_format == 'CSV':
-                    SeedIO_init.create_text_output(ICAstring=ICAstring,level=2)
+# if # of session larger than zero, iterate on that
+if layout.get_sessions() > 0:
+    pool.map(run_CORTADO,layout.get_sessions())
+else:
+    pool.map(run_CORTADO,layout.get_subjects())
