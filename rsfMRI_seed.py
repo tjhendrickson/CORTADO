@@ -48,7 +48,6 @@ class SeedIO:
             self.regressor_file = self.seed_ROI_name + '-Regressor.txt'
 
     def write_regressor(self):
-        print('\n')
         print('rsfMRI_seed.py: Create regressor file ')
         print('\t-Output folder: ' + self.output_dir)
         print('\t-Cifti file: ' + self.cifti_file)
@@ -105,7 +104,6 @@ class SeedIO:
     def create_text_output(self,ICAstring,text_output_dir,level):
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
-        print('\n')
         print('rsfMRI_seed.py: Create Text Output ')
         print('\t-Text output folder: %s' %str(text_output_dir))
         print('\t-Cifti file: %s' %str(self.cifti_file))

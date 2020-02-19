@@ -12,9 +12,9 @@ from functools import partial
 from collections import OrderedDict
 import pdb
 from rsfMRI_seed import SeedIO
-from multiprocessing import Pool
+import dask
 
-
+@dask.delayed
 def run(command, env={}, cwd=None):
     merged_env = os.environ
     merged_env.update(env)
@@ -31,7 +31,7 @@ def run(command, env={}, cwd=None):
     if process.returncode != 0:
         raise Exception("Non zero return code: %d"%process.returncode)
 
-
+@dask.delayed
 def run_Generatefsf_level1_processing(**args):
     args.update(os.environ)
     cmd = '/generate_level1_fsf.sh ' + \
@@ -42,6 +42,7 @@ def run_Generatefsf_level1_processing(**args):
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
+@dask.delayed
 def run_Generatefsf_level2_processing(**args):
     args.update(os.environ)
     cmd = '/generate_level2_fsf.sh ' + \
@@ -52,6 +53,7 @@ def run_Generatefsf_level2_processing(**args):
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
+@dask.delayed
 def run_seed_level1_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
@@ -80,6 +82,7 @@ def run_seed_level1_rsfMRI_processing(**args):
     cmd = cmd.format(**args)
     run(cmd, cwd=args["outdir"])
 
+@dask.delayed
 def run_seed_level2_rsfMRI_processing(**args):
     args.update(os.environ)
     os.system("export PATH=/usr/local/fsl/bin:${PATH}")
@@ -132,7 +135,6 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
 parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='NONE')
-parser.add_argument('--n_cpus', help='Number of CPUs/cores available to use.',default=1, type=int)
 args = parser.parse_args()
 
 # global variables
@@ -150,7 +152,6 @@ selected_reg_name = args.reg_name
 msm_all_reg_name = "MSMAll_2_d40_WRN"
 preprocessing_type = args.preprocessing_type
 motion_confounds = args.motion_confounds
-pool = Pool(processes=args.n_cpus)
 if preprocessing_type == 'HCP':
     if not motion_confounds == 'NONE':
         motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
@@ -206,10 +207,10 @@ print('\t-Use mixed effects if multiple of same acquisition: %s' %str(args.combi
 print('\t-Text output format: %s' %str(args.text_output_format))
 print('\n')
 
-def run_CORTADO(scanning_session):
-    if layout.get(session=scanning_session,target='subject',return_type='id') > 0:
-        subject_label = layout.get(session=scanning_session,target='subject',return_type='id')[0]
-        ses_label=scanning_session
+# if # of session larger than zero, iterate on that
+if layout.get_sessions() > 0:
+    for ses_label in layout.get_sessions():
+        subject_label = layout.get(session=ses_label,target='subject',return_type='id')[0]
         # initialize level 2 variables
         if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
             level_2_foldername = 'NONE'
@@ -599,7 +600,8 @@ def run_CORTADO(scanning_session):
                             for stage, stage_func in rsfMRI_seed_stages_dict.iteritems():
                                 if stage in args.stages:
                                     stage_func()
-    else:
+else:
+    for subject_label in layout.get_subjects():
         # initialize level 2 variables
         if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
             level_2_foldername = 'NONE'
@@ -1022,9 +1024,3 @@ def run_CORTADO(scanning_session):
                 if seed_analysis_output == 'parcellated':
                     if text_output_format == 'csv' or text_output_format == 'CSV':
                         SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
-
-# if # of session larger than zero, iterate on that
-if layout.get_sessions() > 0:
-    pool.map(run_CORTADO,layout.get_sessions())
-else:
-    pool.map(run_CORTADO,layout.get_subjects())
