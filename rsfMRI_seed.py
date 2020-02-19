@@ -98,7 +98,7 @@ class SeedIO:
             df['avg'] = df[self.seed_ROI_name].mean(axis=1)
             df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
         # figure out what name of regressor file should be
-        print('\tregressor file: %s' %regressor_file_path)
+        print('\t-Regressor file: %s' %regressor_file_path)
         print('\n') 
         return regressor_file_path 
     def create_text_output(self,ICAstring,text_output_dir,level):
