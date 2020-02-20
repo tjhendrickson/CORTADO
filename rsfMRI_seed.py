@@ -9,7 +9,7 @@ import fcntl as F
 import csv
 import numpy as np
 from glob import glob
-
+import dask
 
 class SeedIO:
     def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name):
@@ -46,7 +46,6 @@ class SeedIO:
             self.regressor_file = seed_ROI_merged_string + '-Regressor.txt'
         else:
             self.regressor_file = self.seed_ROI_name + '-Regressor.txt'
-
     def write_regressor(self):
         print('rsfMRI_seed.py: Create regressor file ')
         print('\t-Output folder: ' + self.output_dir)
