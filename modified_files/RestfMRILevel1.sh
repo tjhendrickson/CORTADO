@@ -60,7 +60,6 @@ local scriptName=$(basename $0)
     unset Pipeline
     unset FinalFile
 	unset volFinalFile
-	unset BoldRef
 	unset fMRIFilename
 	unset fMRIFolderName
 	unset LevelTwofMRIName
@@ -104,10 +103,6 @@ local scriptName=$(basename $0)
 				;;
 			--volfinalfile=*)
 				volFinalFile=${argument#*=}
-				index=$(( index + 1 ))
-				;;
-			--boldref=*)
-				BoldRef=${argument#*=}
 				index=$(( index + 1 ))
 				;;
 			--fmrifilename=*)
@@ -184,7 +179,6 @@ local scriptName=$(basename $0)
 	echo "READ_ARGS: ICAstring: ${ICAoutputs}"
 	echo "READ_ARGS: File Derivative to Use for Analysis: ${FinalFile}"
 	echo "READ_ARGS: Volumetric File Derivative to Use for Analysis: ${volFinalFile}"
-	echo "READ_ARGS: Rest Reference Image: ${BoldRef}"
 	echo "READ_ARGS: fMRIFilename: ${fMRIFilename}"
 	echo "READ_ARGS: fMRIFolderName: ${fMRIFolderName}"
 	echo "READ_ARGS: ResultsFolder: ${ResultsFolder}"
@@ -386,78 +380,6 @@ main(){
 			cp ${FinalFile} ${outdir}/${fMRIFolderName}_Atlas${RegString}${TemporalFilterString}${FinalSmoothingString}${ICAoutputs}${Extension}
 		fi
 	fi
-
-	### Apply spatial smoothing to volume analysis
-	if $runVolume ; then
-		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_NIFTI: Standard NIFTI Volume-based Processsing"
-
-		#Add edge-constrained volume smoothing
-		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_NIFTI: Add edge-constrained volume smoothing"
-		FinalSmoothingSigma=`echo "$FinalSmoothingFWHM / ( 2 * ( sqrt ( 2 * l ( 2 ) ) ) )" | bc -l`
-		InputfMRI=${FinalFile}
-		InputSBRef=${BoldRef}
-		fslmaths ${InputSBRef} -bin ${FEATDir}/mask_orig
-		fslmaths ${FEATDir}/mask_orig -kernel gauss ${FinalSmoothingSigma} -fmean ${FEATDir}/mask_orig_weight -odt float
-		fslmaths ${InputfMRI} -kernel gauss ${FinalSmoothingSigma} -fmean \
-		-div ${FEATDir}/mask_orig_weight -mas ${FEATDir}/mask_orig \
-		${FEATDir}/${fMRIFolderName}${FinalSmoothingString} -odt float
-
-		#Add volume dilation
-		#
-		# For some subjects, FreeSurfer-derived brain masks (applied to the time
-		# series data in IntensityNormalization.sh as part of
-		# GenericfMRIVolumeProcessingPipeline.sh) do not extend to the edge of brain
-		# in the MNI152 space template. This is due to the limitations of volume-based
-		# registration. So, to avoid a lack of coverage in a group analysis around the
-		# penumbra of cortex, we will add a single dilation step to the input prior to
-		# creating the Level1 maps.
-		#
-		# Ideally, we would condition this dilation on the resolution of the fMRI
-		# data.  Empirically, a single round of dilation gives very good group
-		# coverage of MNI brain for the 2 mm resolution of HCP fMRI data. So a single
-		# dilation is what we use below.
-		#
-		# Note that for many subjects, this dilation will result in signal extending
-		# BEYOND the limits of brain in the MNI152 template.  However, that is easily
-		# fixed by masking with the MNI space brain template mask if so desired.
-		#
-		# The specific implementation involves:
-		# a) Edge-constrained spatial smoothing on the input fMRI time series (and masking
-		#    that back to the original mask).  This step was completed above.
-		# b) Spatial dilation of the input fMRI time series, followed by edge constrained smoothing
-		# c) Adding the voxels from (b) that are NOT part of (a) into (a).
-		#
-		# The motivation for this implementation is that:
-		# 1) Identical voxel-wise results are obtained within the original mask.  So, users
-		#    that desire the original ("tight") FreeSurfer-defined brain mask (which is
-		#    implicitly represented as the non-zero voxels in the InputSBRef volume) can
-		#    mask back to that if they chose, with NO impact on the voxel-wise results.
-		# 2) A simpler possible approach of just dilating the result of step (a) results in
-		#    an unnatural pattern of dark/light/dark intensities at the edge of brain,
-		#    whereas the combination of steps (b) and (c) yields a more natural looking
-		#    transition of intensities in the added voxels.
-		echo "MAIN: SMOOTH_OR_PARCELLATE: SMOOTH_NIFTI: Add volume dilation"
-
-		# Dilate the original BOLD time series, then do (edge-constrained) smoothing
-		fslmaths ${FEATDir}/mask_orig -dilM -bin ${FEATDir}/mask_dilM
-		fslmaths ${FEATDir}/mask_dilM \
-		-kernel gauss ${FinalSmoothingSigma} -fmean ${FEATDir}/mask_dilM_weight -odt float
-		fslmaths ${InputfMRI} -dilM -kernel gauss ${FinalSmoothingSigma} -fmean \
-		-div ${FEATDir}/mask_dilM_weight -mas ${FEATDir}/mask_dilM \
-		${FEATDir}/${fMRIFolderName}_dilM${FinalSmoothingString} -odt float
-
-		# Take just the additional "rim" voxels from the dilated then smoothed time series, and add them
-		# into the smoothed time series (that didn't have any dilation)
-		SmoothedDilatedResultFile=${FEATDir}/${fMRIFolderName}${FinalSmoothingString}_dilMrim
-		fslmaths ${FEATDir}/mask_orig -binv ${FEATDir}/mask_orig_inv
-		fslmaths ${FEATDir}/${fMRIFolderName}_dilM${FinalSmoothingString} \
-		-mas ${FEATDir}/mask_orig_inv \
-		-add ${FEATDir}/${fMRIFolderName}${FinalSmoothingString} \
-		${SmoothedDilatedResultFile}
-
-	fi # end Volume spatial smoothing
-
-
 
 	##### RUN film_gls (GLM ANALYSIS ON LEVEL 1) #####
 

@@ -63,7 +63,6 @@ def run_seed_level1_rsfMRI_processing(**args):
         '--pipeline={pipeline} ' + \
         '--finalfile={finalfile} ' + \
         '--volfinalfile={vol_finalfile} ' + \
-        '--boldref={bold_ref} ' + \
         '--fmrifilename={fmrifilename} ' + \
         '--fmrifoldername={fmrifoldername} ' + \
         '--DownSampleFolder={DownSampleFolder} ' + \
@@ -105,7 +104,6 @@ parser.add_argument('input_dir', help='The directory where the preprocessed deri
 parser.add_argument('output_dir', help='The directory where the output files should be stored.')
 parser.add_argument('--preprocessing_type', help='BIDS-apps preprocessing pipeline run on data. Choices include "HCP" and "fmriprep". ',choices=['HCP','fmriprep'],default='HCP')
 parser.add_argument('--use_ICA_outputs',help='Use ICA (whether FIX or AROMA) outputs in seed analysis. Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='Yes')
-parser.add_argument('--stages',help='Which stages to run. Space separated list. ',nargs="+", choices=['rsfMRISeedAnalysis', 'Generatefsf'],default=['Generatefsf', 'rsfMRISeedAnalysis'])
 parser.add_argument('--combine_resting_scans',help='If multiple of the same resting state BIDS file type exist should they be combined prior seed analysis? Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='No')
 parser.add_argument('--smoothing',help="What FWHM smoothing (in mm) to apply to final output",default=4, type=int)
 parser.add_argument('--parcellation_file', help='The CIFTI label file to use or used to parcellate the brain. ', default='NONE')
@@ -197,13 +195,22 @@ print('\t-Text output format: %s' %str(args.text_output_format))
 print('\n')
 
 # if # of session larger than zero, iterate on that
-def run_CORTADO(scanning_sessions):
-    if layout.get_sessions() > 0:
-        for ses_label in scanning_sessions:
-            subject_label = layout.get(session=ses_label,target='subject',return_type='id')[0]
+#level_2_foldername
+def run_CORTADO(bolds):
+    if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
+        level_2_foldername = 'NONE'
+    else:
+        level_2_foldername = 'rsfMRI_combined'
+        separated_bolds_list = []
+        for idx,fmritcs in sorted(enumarate(bolds)):
+            if 
+
+    if 'ses' in bolds[0]
+        for fmritcs in bolds:
+            subject_label = fmritcs.split('sub-')[1].split('/')[0]
+            ses_label = fmritcs.split('ses-')[1].split('/')[0]
             # set output folder path
             outdir=args.output_dir + "/sub-%s/ses-%s" % (subject_label, ses_label)
-           
             if preprocessing_type == 'HCP':
                 if ICAoutputs == 'YES':
                     if selected_reg_name == msm_all_reg_name:
@@ -248,12 +255,6 @@ def run_CORTADO(scanning_sessions):
                 fmriname = os.path.basename(fmritcs).split(".")[0]
                 if level_2_foldername == 'sub-'+ subject_label+ '_ses-' + ses_label+'_rsfMRI_combined':
                     fmrinames.append(fmriname)
-                assert fmriname
-                bold_ref = "NONE"
-            elif preprocessing_type == 'fmriprep':
-                #reference image
-                bold_ref = bolds_ref[idx]
-                vol_fmritcs='NONE'
 
             if len(seed_ROI_name) > 1:
                 if seed_handling == "together":
@@ -277,7 +278,6 @@ def run_CORTADO(scanning_sessions):
                             ICAstring=ICAstring,
                             finalfile=fmritcs,
                             vol_finalfile=vol_fmritcs,
-                            bold_ref=bold_ref,
                             fmrifilename=fmriname,
                             fmrifoldername=shortfmriname,
                             DownSampleFolder=DownSampleFolder,
@@ -309,7 +309,6 @@ def run_CORTADO(scanning_sessions):
                             ICAstring=ICAstring,
                             finalfile=fmritcs,
                             vol_finalfile=vol_fmritcs,
-                            bold_ref=bold_ref,
                             fmrifilename=fmriname,
                             fmrifoldername=shortfmriname,
                             DownSampleFolder=DownSampleFolder,
@@ -353,7 +352,6 @@ def run_CORTADO(scanning_sessions):
                                 finalfile=fmritcs,
                                 confound=motion_confounds_filepath,
                                 vol_finalfile=vol_fmritcs,
-                                bold_ref=bold_ref,
                                 fmrifilename=fmriname,
                                 fmrifoldername=shortfmriname,
                                 lowresmesh=lowresmesh,
@@ -381,7 +379,6 @@ def run_CORTADO(scanning_sessions):
                                 finalfile=fmritcs,
                                 confound=motion_confounds_filepath,
                                 vol_finalfile=vol_fmritcs,
-                                bold_ref=bold_ref,
                                 fmrifilename=fmriname,
                                 fmrifoldername=shortfmriname,
                                 lowresmesh=lowresmesh,
@@ -420,7 +417,6 @@ def run_CORTADO(scanning_sessions):
                         finalfile=fmritcs,
                         vol_finalfile=vol_fmritcs,
                         confound=motion_confounds_filepath,
-                        bold_ref=bold_ref,
                         fmrifilename=fmriname,
                         fmrifoldername=shortfmriname,
                         lowresmesh=lowresmesh,
@@ -447,7 +443,6 @@ def run_CORTADO(scanning_sessions):
                         finalfile=fmritcs,
                         vol_finalfile=vol_fmritcs,
                         confound=motion_confounds_filepath,
-                        bold_ref=bold_ref,
                         fmrifilename=fmriname,
                         fmrifoldername=shortfmriname,
                         lowresmesh=lowresmesh,
@@ -582,10 +577,6 @@ def run_CORTADO(scanning_sessions):
                     AtlasFolder='/'.join(fmritcs.split("/")[0:4])
                     fmriname = fmritcs.path.basename.split(".")[0]
                     assert fmriname
-                    bold_ref = "NONE"
-                elif preprocessing_type == 'fmriprep':
-                    bold_ref = bolds_ref[idx]
-                    vol_fmritcs="NONE"
                 if len(seed_ROI_name) > 1:
                     if seed_handling == "together":
                         if preprocessing_type == 'HCP':
@@ -611,7 +602,6 @@ def run_CORTADO(scanning_sessions):
                                 ICAstring=ICAstring,
                                 finalfile=fmritcs,
                                 vol_finalfile=vol_fmritcs,
-                                bold_ref=bold_ref,
                                 fmrifilename=fmriname,
                                 fmrifoldername=shortfmriname,
                                 lowresmesh=lowresmesh,
@@ -638,7 +628,6 @@ def run_CORTADO(scanning_sessions):
                                 ICAstring=ICAstring,
                                 finalfile=fmritcs,
                                 vol_finalfile=vol_fmritcs,
-                                bold_ref=bold_ref,
                                 fmrifilename=fmriname,
                                 fmrifoldername=shortfmriname,
                                 lowresmesh=lowresmesh,
@@ -678,7 +667,6 @@ def run_CORTADO(scanning_sessions):
                                     vol_finalfile=vol_fmritcs,
                                     ICAstring=ICAstring,
                                     finalfile=fmritcs,
-                                    bold_ref = bolds_ref[idx],
                                     fmrifilename=fmriname,
                                     fmrifoldername=shortfmriname,
                                     lowresmesh=lowresmesh,
@@ -705,7 +693,6 @@ def run_CORTADO(scanning_sessions):
                                         vol_finalfile=vol_fmritcs,
                                         ICAstring=ICAstring,
                                         finalfile=fmritcs,
-                                        bold_ref = bolds_ref[idx],
                                         fmrifilename=fmriname,
                                         fmrifoldername=shortfmriname,
                                         lowresmesh=lowresmesh,
@@ -742,7 +729,6 @@ def run_CORTADO(scanning_sessions):
                             ICAstring=ICAstring,
                             vol_finalfile=vol_fmritcs,
                             finalfile=fmritcs,
-                            bold_ref = bolds_ref[idx],
                             fmrifilename=fmriname,
                             fmrifoldername=shortfmriname,
                             lowresmesh=lowresmesh,
@@ -770,7 +756,6 @@ def run_CORTADO(scanning_sessions):
                             ICAstring=ICAstring,
                             vol_finalfile=vol_fmritcs,
                             finalfile=fmritcs,
-                            bold_ref = bolds_ref[idx],
                             fmrifilename=fmriname,
                             fmrifoldername=shortfmriname,
                             lowresmesh=lowresmesh,
@@ -905,79 +890,59 @@ def run_CORTADO(scanning_sessions):
                             SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2)
                             
                             
-if layout.get_sessions() > 0:
-    pdb.set_trace()
+if layout.get_sessions() > 0:  
     scanning_sessions = layout.get_sessions()
-    # initialize level 2 variables
-    if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
-        level_2_foldername = 'NONE'
-    else:
-        level_2_foldername = 'rsfMRI_combined'
-    if level_2_foldername == 'NONE':
-        for scanning_session in scanning_sessions:
-            pass
-            
-        if preprocessing_type == 'HCP':
-            # use ICA outputs
-            if ICAoutputs == 'YES':
-                ICAstring="_FIXclean"
-                if selected_reg_name == msm_all_reg_name:
-                    bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest') if msm_all_reg_name+'_hp2000_clean' in f.filename]
-                else:
-                    bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
-            # do not use ICA outputs
-            else:
-                ICAstring=""
-                if selected_reg_name == msm_all_reg_name:
-                    bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
-                else:
-                    bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
-        elif preprocessing_type == 'fmriprep':
-            #use ICA outputs
-            if ICAoutputs == 'YES':
-                ICAstring="_AROMAclean"
-                bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
-            # do not use ICA outputs
-            else:
-                ICAstring=""
-                bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
-        bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
-
-else:
-    scanning_sessions = layout.get_subjects()
-    # initialize level 2 variables
-    if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
-        level_2_foldername = 'NONE'
-    else:
-        level_2_foldername = '_rsfMRI_combined'
     if preprocessing_type == 'HCP':
         # use ICA outputs
         if ICAoutputs == 'YES':
             ICAstring="_FIXclean"
             if selected_reg_name == msm_all_reg_name:
-                bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
-                                                        extensions="dtseries.nii", task='rest',) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',session=scanning_sessions) if msm_all_reg_name+'_hp2000_clean' in f.filename]
             else:
-                bolds = [f.filename for f in layout.get(subject=subject_label, type='clean',
-                                                        extensions="dtseries.nii", task='rest',) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',session=scanning_sessions) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
         # do not use ICA outputs
         else:
             ICAstring=""
             if selected_reg_name == msm_all_reg_name:
-                bolds = [f.filename for f in layout.get(subject=subject_label,
-                                                        extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',session=scanning_sessions) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
             else:
-                bolds = [f.filename for f in layout.get(subject=subject_label,
-                                                        extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',session=scanning_sessions) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
     elif preprocessing_type == 'fmriprep':
         #use ICA outputs
         if ICAoutputs == 'YES':
             ICAstring="_AROMAclean"
-            bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'smoothAROMAnonaggr' in f.filename]
+            bolds = [f.filename for f in layout.get(type='bold',task='rest',session=scanning_sessions) if 'smoothAROMAnonaggr' in f.filename]
         # do not use ICA outputs
         else:
             ICAstring=""
-            bolds = [f.filename for f in layout.get(subject=subject_label,type='bold',task='rest') if 'preproc' in f.filename]
-    bolds_ref = [f.filename for f in layout.get(subject=subject_label,session=ses_label,type='boldref',task='rest')]
+            bolds = [f.filename for f in layout.get(type='bold',task='rest',session=scanning_sessions) if 'preproc' in f.filename]
+        bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest',session=scanning_sessions)]
+else:
+    scanning_sessions = layout.get_subjects()
+    if preprocessing_type == 'HCP':
+        # use ICA outputs
+        if ICAoutputs == 'YES':
+            ICAstring="_FIXclean"
+            if selected_reg_name == msm_all_reg_name:
+                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=scanning_sessions) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+            else:
+                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=scanning_sessions) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+        # do not use ICA outputs
+        else:
+            ICAstring=""
+            if selected_reg_name == msm_all_reg_name:
+                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=scanning_sessions) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+            else:
+                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=scanning_sessions) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+    elif preprocessing_type == 'fmriprep':
+        #use ICA outputs
+        if ICAoutputs == 'YES':
+            ICAstring="_AROMAclean"
+            bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=scanning_sessions) if 'smoothAROMAnonaggr' in f.filename]
+        # do not use ICA outputs
+        else:
+            ICAstring=""
+            bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=scanning_sessions) if 'preproc' in f.filename]
+        bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest',subject=scanning_sessions)]
 
-dask.compute(run_CORTADO(scanning_sessions))
+dask.compute(run_CORTADO(bolds))
