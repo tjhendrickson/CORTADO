@@ -9,7 +9,6 @@ import fcntl as F
 import csv
 import numpy as np
 from glob import glob
-import dask
 
 class SeedIO:
     def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name):
@@ -101,7 +100,7 @@ class SeedIO:
         print('\t-Regressor file: %s' %regressor_file_path)
         print('\n') 
         return regressor_file_path
-    @dask.delayed
+
     def create_text_output(self,ICAstring,text_output_dir,level):
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
