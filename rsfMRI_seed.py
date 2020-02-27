@@ -46,6 +46,7 @@ class SeedIO:
             self.regressor_file = seed_ROI_merged_string + '-Regressor.txt'
         else:
             self.regressor_file = self.seed_ROI_name + '-Regressor.txt'
+
     def write_regressor(self):
         print('rsfMRI_seed.py: Create regressor file ')
         print('\t-Output folder: ' + self.output_dir)
@@ -99,7 +100,8 @@ class SeedIO:
         # figure out what name of regressor file should be
         print('\t-Regressor file: %s' %regressor_file_path)
         print('\n') 
-        return regressor_file_path 
+        return regressor_file_path
+    @dask.delayed
     def create_text_output(self,ICAstring,text_output_dir,level):
         # find first level CORTADO folder for given participant and session
         seed=self.regressor_file.split('-Regressor.txt')[0]
