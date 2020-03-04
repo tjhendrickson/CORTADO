@@ -261,13 +261,6 @@ main(){
 
 	# Create output .feat directory ($FEATDir) for this analysis
 	FEATDir="${outdir}/${fMRIFilename}${ParcellationString}${ICAoutputs}_level1_seed${seedROI}.feat"
-	echo "MAIN: MAKE_DESIGNS: FEATDir: ${FEATDir}"
-	if [ -e ${FEATDir} ]; then
-		rm -r ${FEATDir}
-		mkdir ${FEATDir}
-	else
-		mkdir -p ${FEATDir}
-	fi
 
 	# Create regressor_file variables
 	regressor_file="${seedROI}-Regressor.txt"

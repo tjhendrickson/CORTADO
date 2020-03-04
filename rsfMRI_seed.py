@@ -5,7 +5,6 @@ import pandas as pd
 import os
 import cifti
 import pdb
-import fcntl as F
 import csv
 import numpy as np
 from glob import glob
@@ -125,7 +124,7 @@ class SeedIO:
             CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
             zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
         elif level == 2:
-            CORTADO_dir = glob(os.path.join(self.output_dir,"*_rsfMRI_combined_*.feat"))[0]
+            CORTADO_dir = glob(os.path.join(self.output_dir,"rsfMRI_combined_*.feat"))[0]
             zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats_fixedEffects","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
         try:
@@ -157,47 +156,20 @@ class SeedIO:
             if session_id:
                 if len(output_text_file_df[output_text_file_df['Session ID']==int(session_id)]) == 0:
                     append_output_text_file = open(output_text_file,'a')
-                    try:
-                        # try holding an exclusive lock first
-                        F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
-                    except IOError:
-                        raise IOError('flock() failed to hold an exclusive lock')
                     writer = csv.writer(append_output_text_file)
                     writer.writerow(row_data)
-                    # Unlock file
-                    try:
-                        F.flock(append_output_text_file, F.LOCK_UN)
-                        append_output_text_file.close()
-                    except IOError:
-                        raise IOError('flock() failed to unlock file.')
                 else:
                     print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
             else:
                 if len(output_text_file_df[output_text_file_df['Subject ID']==int(subject_id)]) == 0:
                     append_output_text_file = open(output_text_file,'a')
-                    try:
-                        # try holding an exclusive lock first
-                        F.flock(append_output_text_file, F.LOCK_EX | F.LOCK_NB)
-                    except IOError:
-                        raise IOError('flock() failed to hold an exclusive lock')
                     writer = csv.writer(append_output_text_file)
                     writer.writerow(row_data)
-                    # Unlock file
-                    try:
-                        F.flock(append_output_text_file, F.LOCK_UN)
-                        append_output_text_file.close()
-                    except IOError:
-                        raise IOError('flock() failed to unlock file.')
                 else:
                     print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
         except:
             #add header and append data to file
             write_output_text_file = open(output_text_file,'w')
-            try:
-                # try holding an exclusive lock first
-                F.flock(write_output_text_file, F.LOCK_EX | F.LOCK_NB)
-            except IOError:
-                raise IOError('flock() failed to hold an exclusive lock')
             writer = csv.writer(write_output_text_file)
             row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
             if os.path.basename(self.output_dir).split('-')[0] == 'ses':
@@ -207,12 +179,6 @@ class SeedIO:
                 row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
             writer.writerow(fieldnames)
             writer.writerow(row_data)
-            # Unlock file
-            try:
-                F.flock(write_output_text_file, F.LOCK_UN)
-                write_output_text_file.close()
-            except IOError:
-                raise IOError('flock() failed to unlock file.')
                             
                     
                     
