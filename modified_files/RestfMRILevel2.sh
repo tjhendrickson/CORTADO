@@ -253,12 +253,7 @@ main(){
 
 	# Make LevelTwoFEATDir
 	LevelTwoFEATDir="${outdir}/${LevelTwoFolderName}${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}${ICAoutputs}_level2_seed${seedROI}.feat"
-	if [[ -e ${LevelTwoFEATDir} ]] ; then
-	rm -r ${LevelTwoFEATDir}
-	mkdir ${LevelTwoFEATDir}
-	else
 	mkdir -p ${LevelTwoFEATDir}
-	fi
 
 	# Edit template.fsf and place it in LevelTwoFEATDir
 	cat ${outdir}/${LevelTwoFolderName}_hp200_s4_level2.fsf | sed s/_hp200_s4/${TemporalFilterString}${SmoothingString}${RegString}${ParcellationString}/g > ${LevelTwoFEATDir}/design.fsf

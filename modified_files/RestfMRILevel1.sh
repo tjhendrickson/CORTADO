@@ -261,6 +261,7 @@ main(){
 
 	# Create output .feat directory ($FEATDir) for this analysis
 	FEATDir="${outdir}/${fMRIFilename}${ParcellationString}${ICAoutputs}_level1_seed${seedROI}.feat"
+	mkdir -p ${FEATDir}
 
 	# Create regressor_file variables
 	regressor_file="${seedROI}-Regressor.txt"
