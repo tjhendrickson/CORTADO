@@ -578,7 +578,7 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, highpass,
                                     l.acquire()
                                     SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=output_dir,level=2)
                                     l.release()
-                                    time.sleep()
+                                    time.sleep(1)
                 else:
                     for seed in seed_ROI_name:
                         run_Generatefsf_level2_processing(
@@ -629,6 +629,8 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, highpass,
                             SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=output_dir,level=2)
                             l.release()
                             time.sleep(1)
+        else:
+            print(os.path.join(outdir,'rsfMRI_combined_hp200_s4_level2.fsf') + ' exists, will not run CORTADO')
 multiproc_pool = Pool(int(args.num_cpus))            
 if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
     if preprocessing_type == 'HCP':
@@ -703,7 +705,7 @@ else:
                     ICAstring=""
                     bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
                 bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
-            if len(bolds) >= 2:
+            if len(bolds) == 2:
                 combined_bolds_list.append(bolds)
     else:
         for scanning_session in layout.get_subjects():
@@ -734,26 +736,6 @@ else:
                 bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
             if len(bolds) >= 2:
                 combined_bolds_list.append(bolds)
-    pdb.set_trace()
-    run_CORTADO(ICAstring=ICAstring, 
-                preprocessing_type=preprocessing_type,
-                highpass=highpass,
-                lowreshmesh=lowresmesh,
-                highresmesh=highresmesh,
-                smoothing=smoothing,
-                parcel_file=parcel_file,
-                parcel_name=parcel_name,
-                seed_ROI_name=seed_ROI_name,
-                seed_handling=seed_handling,
-                seed_analysis_output=seed_analysis_output,
-                text_output_format=text_output_format,
-                selected_reg_name=selected_reg_name,
-                motion_confounds=motion_confounds,
-                ICAoutputs=ICAoutputs,
-                combine_resting_scans=args.combine_resting_scans,
-                output_dir=args.output_dir,
-                bold=sorted(combined_bolds_list)[0])
-    """
     multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
                            preprocessing_type=preprocessing_type,
                            highpass=highpass,
@@ -772,4 +754,4 @@ else:
                            combine_resting_scans=args.combine_resting_scans,
                            output_dir=args.output_dir),
     sorted(combined_bolds_list))
-    """
+    
