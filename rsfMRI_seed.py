@@ -127,58 +127,47 @@ class SeedIO:
             CORTADO_dir = glob(os.path.join(self.output_dir,"rsfMRI_combined_*.feat"))[0]
             zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats_fixedEffects","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
+        # if file does not exist write header to it, otherwise continue
         try:
             read_output_text_file = open(output_text_file,'r')
             read_output_text_file.close()
         except:
+            # file exists and is accessible, ensure that to be appended data does not yet exist on it
+            fieldnames = self.parcel_labels
+            # append subject and session ID to fieldname list
+            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+                fieldnames.insert(0,'Session ID')
+                fieldnames.insert(0,'Subject ID')
             # if doesn't exist create headers and add subject/session data to file
-            write_output_text_file = open(output_text_file,'w')
-        # file exists and is accessible, ensure that to be appended data does not yet exist on it
-        fieldnames = self.parcel_labels
-        # append subject and session ID to fieldname list
+            with open(output_text_file,'w') as output_text_file_open:
+                writer = csv.writer(output_text_file_open)
+                writer.writerow(fieldnames)
+        # find participant if it exists
+        row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
         if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-            fieldnames.insert(0,'Session ID')
-        fieldnames.insert(0,'Subject ID')
-        
-        # if dataset is empty pandas will throw an error
-        try:     
-            output_text_file_df = pd.read_csv(output_text_file)
-            # find participant if it exists
-            row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
-            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-                session_id = os.path.basename(self.output_dir).split('-')[1]
-                row_data.insert(0,session_id)
-                subject_id = self.output_dir.split('sub-')[1].split('/')[0]    
-                row_data.insert(0,subject_id)
-            else:
-                subject_id = os.path.basename(self.output_dir).split('-')[1]
-                row_data.insert(0,subject_id)
-            if session_id:
-                if len(output_text_file_df[output_text_file_df['Session ID']==int(session_id)]) == 0:
-                    append_output_text_file = open(output_text_file,'a')
+            session_id = str(os.path.basename(self.output_dir).split('-')[1])
+            row_data.insert(0,session_id)
+            subject_id = str(self.output_dir.split('sub-')[1].split('/')[0])    
+            row_data.insert(0,subject_id)
+        else:
+            subject_id = str(os.path.basename(self.output_dir).split('-')[1])
+            row_data.insert(0,subject_id)
+        # create dataframe of output text file
+        output_text_file_df = pd.read_csv(output_text_file)
+        if session_id:
+            if len(output_text_file_df.loc[(output_text_file_df['Session ID']==session_id) & (output_text_file_df['Subject ID']==subject_id)]) == 0:
+                with open(output_text_file,'a') as append_output_text_file:
                     writer = csv.writer(append_output_text_file)
                     writer.writerow(row_data)
-                else:
-                    print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
             else:
-                if len(output_text_file_df[output_text_file_df['Subject ID']==int(subject_id)]) == 0:
-                    append_output_text_file = open(output_text_file,'a')
+                print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
+        else:
+            if len(output_text_file_df[output_text_file_df['Subject ID']==subject_id]) == 0:
+                with open(output_text_file,'a') as output_text_file:
                     writer = csv.writer(append_output_text_file)
                     writer.writerow(row_data)
-                else:
-                    print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
-        except:
-            #add header and append data to file
-            write_output_text_file = open(output_text_file,'w')
-            writer = csv.writer(write_output_text_file)
-            row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
-            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
-                row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
-                row_data.insert(0,self.output_dir.split('sub-')[1].split('/')[0])
             else:
-                row_data.insert(0,os.path.basename(self.output_dir).split('-')[1])
-            writer.writerow(fieldnames)
-            writer.writerow(row_data)
+                print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
                             
                     
                     
