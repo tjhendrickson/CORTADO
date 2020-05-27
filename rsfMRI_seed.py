@@ -7,13 +7,21 @@ import cifti
 import csv
 import numpy as np
 from glob import glob
+import subprocess
+from subprocess import Popen, PIPE
 
 class seed_analysis:
     def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level):
+        '''
+        Class initialization for seed based analysis. The primary purpose of this class is to:
+        1) Performs tests on arguments cifti_file and parcel_file to ensure inputted arguments are in the expected format
+        2) Intialize important variables that will be used for downstream child classes 'regression' and 'connectivity'
+        '''
         # path that data will be written to
         self.output_dir = output_dir
         # inputted cifti file
         self.cifti_file = cifti_file
+        self.shortfmriname=self.cifti_file.split("/")[-2]
         # inputted atlas/parcellation file
         self.parcel_file = parcel_file
         # shorthand name chosen for parcel file
@@ -28,9 +36,6 @@ class seed_analysis:
         if not os.path.isdir(self.output_dir):
             os.makedirs(self.output_dir)
         
-        # determine fmriname
-        self.fmriname = os.path.basename(cifti_file).split('.')[0]
-                
         # read parcel labels into list to query later
         read_parcel_file = cifti.read(self.parcel_file)
         parcel_file_label_tuple = read_parcel_file[1][0][0][1]
@@ -83,11 +88,39 @@ class seed_analysis:
     
                     
 class regression(seed_analysis):
-    def __init__(self,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,):
+    def __init__(self,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
+        '''
+        Child class of seed_analysis. This performs regression on resting state data by:
+        1) Extracting seed ROI/parcel timeseries
+        2) Include the extracted timeseries as a regressor/explanatory to a GLM driven by FSL and HCP tools
+        3) Use the targeted ROI timeseries as the dependent measure
+        4) Calculate the parameter estimate as a proxy measure of seed based connectivity
+        '''
+        
+        # hardcoded arguments
         self.highpass = "2000"
         self.lowresmesh = 32
         self.highresmesh = 164
+        
+        #arguments that may change depending on analysis level
+        self.pipeline = pipeline
+        self.ICAstring = ICAstring
         self.vol_fmritcs = vol_finalfile
+        self.confound = confound
+        self.smoothing = smoothing
+        self.regname = regname
+        self.fmriname = fmriname
+        self.fmrifoldername = fmrifoldername
+        if len(self.vol_fmritcs) > 0:
+            zooms = nibabel.load(self.vol_fmritcs).get_header().get_zooms()
+            self.fmrires = str(int(min(zooms[:3])))
+
+        # Determine locations of necessary directories (using expected naming convention)
+        self.AtlasFolder='/'.join(self.cifti_file.split("/")[0:5])
+        self.DownSampleFolder=self.AtlasFolder + "/fsaverage_LR" + str(self.lowresmesh) + "k"
+        self.ResultsFolder=self.AtlasFolder+"/Results"
+        self.ROIsFolder=self.AtlasFolder+"/ROIs"
+        
         if not type(self.seed_ROI_name) == str:
             separator = "-"
             seed_ROI_merged_string = separator.join(self.seed_ROI_name)
@@ -96,33 +129,22 @@ class regression(seed_analysis):
             self.regressor_file = self.seed_ROI_name + '-Regressor.txt'
         self.write_regressor()
         
-        zooms = nibabel.load(self.vol_fmritcs).get_header().get_zooms()
-        self.fmrires = str(int(min(zooms[:3])))
-
-        # Determine locations of necessary directories (using expected naming convention)
-        self.shortfmriname=self.cifti_file.split("/")[-2]
-        self.AtlasFolder='/'.join(self.cifti_file.split("/")[0:5])
-        self.DownSampleFolder=self.AtlasFolder + "/fsaverage_LR" + str(self.lowresmesh) + "k"
-        self.ResultsFolder=self.AtlasFolder+"/Results"
-        self.ROIsFolder=self.AtlasFolder+"/ROIs"
-        if level == 1:
-            self.level_2_foldername = 'NONE'
+        if self.level == 1:
             self.run_regression_level1()
         else:
-            self.level_2_foldername = 'rsfMRI_combined'
             self.run_regression_level2()
     
-            
     def run_regression_level1(self):
-        args.update(os.environ)
         os.system("export PATH=/usr/local/fsl/bin:${PATH}")
         fsf_creation = '/generate_level1_fsf.sh ' + \
             '--taskname="{fmriname}" ' + \
             '--temporalfilter="{highpass}" ' + \
             '--originalsmoothing="{fmrires}" ' + \
             '--outdir="{outdir}" '
-        fsf_creation = fsf_creation.format(**args)
-        self.run(fsf_creation, cwd=args["outdir"])
+        fsf_creation = fsf_creation.format(fmriname=self.fmriname,highpass=self.highpass,
+                                           fmrires=self.fmrires,outdir=self.output_dir)
+        self.run(fsf_creation, cwd=self.output_dir)
+        
         generate_regression = '/RestfMRILevel1.sh ' + \
             '--outdir={outdir} ' + \
             '--ICAoutputs={ICAstring} ' + \
@@ -144,21 +166,29 @@ class regression(seed_analysis):
             '--parcellation={parcel_name} ' + \
             '--parcellationfile={parcel_file} ' + \
             '--seedROI={seedROI}'
-        generate_regression = generate_regression.format(**args)
-        self.run(generate_regression, cwd=args["outdir"])
+        generate_regression = generate_regression.format(outdir=self.output_dir,ICAstring=self.ICAstring,
+                                                         pipeline=self.pipeline,finalfile=self.cifti_file,
+                                                         vol_finalfile=self.vol_finalfile,fmrifilename=self.fmriname,
+                                                         fmrifoldername=self.fmrifoldername,DownSampleFolder=self.DownSampleFolder,
+                                                         ResultsFolder=self.ResultsFolder,ROIsFolder=self.ROIsFolder,
+                                                         lowresmesh=self.lowresmesh,fmrires=self.fmrires,
+                                                         confound=self.confound,temporal_filter=self.highpass,
+                                                         smoothing=self.smoothing,regname=self.regname,
+                                                         parcel_name=self.parcel_name,parcel_file=self.parcel_file,seedROI=self.seed_ROI_name)
+        self.run(generate_regression, cwd=self.output_dir)
     
     def run_regression_level2(self):
         os.system("export PATH=/usr/local/fsl/bin:${PATH}")
-        args.update(os.environ)
-        cmd = '/generate_level2_fsf.sh ' + \
+        fsf_creation = '/generate_level2_fsf.sh ' + \
             '--taskname="{fmriname}" ' + \
             '--temporalfilter="{highpass}" ' + \
             '--originalsmoothing="{fmrires}" ' + \
             '--outdir="{outdir}" '
-        cmd = cmd.format(**args)
-        self.run(cmd, cwd=args["outdir"])
+        fsf_creation = fsf_creation.format(fmriname=self.level_2_foldername, highpass=self.highpass,
+                                           fmrires=self.fmrires,outdir=self.output_dir)
+        self.run(fsf_creation, cwd=self.output_dir)
 
-        cmd = '/RestfMRILevel2.sh ' + \
+        generate_regression = '/RestfMRILevel2.sh ' + \
             '--outdir={outdir} ' + \
             '--ICAoutputs={ICAstring} ' + \
             '--pipeline={pipeline} ' + \
@@ -169,8 +199,13 @@ class regression(seed_analysis):
             '--regname={regname} ' + \
             '--parcellation={parcel_name} ' + \
             '--seedROI={seedROI}'
-        cmd = cmd.format(**args)
-        self.run(cmd, cwd=args["outdir"])
+        generate_regression = generate_regression.format(outdir=self.output_dir,ICAstring=self.ICAstring,
+                                                         pipeline=self.pipeline,fmrifilename=self.fmriname,
+                                                         level_2_foldername=self.level_2_foldername,
+                                                         smoothing=self.smoothing,temporal_filter=self.highpass,
+                                                         reg_name=self.regname,parcel_name=self.parcel_name,
+                                                         seedROI=self.seedROI)
+        self.run(generate_regression, cwd=self.output_dir)
              
     def write_regressor(self):
         print('rsfMRI_seed.py: Create regressor file ')
@@ -195,7 +230,6 @@ class regression(seed_analysis):
         return regressor_file_path
             
     def run(command, env={}, cwd=None):
-        from subprocess import Popen, PIPE
         merged_env = os.environ
         merged_env.update(env)
         merged_env.pop("DEBUG", None)
@@ -212,7 +246,7 @@ class regression(seed_analysis):
             raise Exception("Non zero return code: %d"%process.returncode)  
     
 
-class correlation(seed_analysis):
+class pair_pair_connectivity(seed_analysis):
     pass
 
 class create_text_output(seed_analysis):

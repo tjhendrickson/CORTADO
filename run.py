@@ -37,6 +37,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                       level,text_output_format,smoothing,parcel_file,
                       parcel_name,selected_reg_name):
     shortfmriname = fmritcs.split("/")[-2]
+    fmriname = os.path.basename(fmritcs).split(".")[0]
     if not motion_confounds == 'NONE':
         motion_confounds_filepath = generate_motion_confounds(base_folder=os.path.join(output_dir,'MNINonLinear','Results',shortfmriname),
                                                               vol_fmritcs=vol_fmritcs,fmritcs=fmritcs,selected_reg_name=selected_reg_name)
@@ -51,8 +52,10 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
                        vol_fmritcs=vol_fmritcs,
                        confound=motion_confounds_filepath,
-                       smoothing=smoothing,regname=selected_reg_name)
-            elif statistic == 'correlation':
+                       smoothing=smoothing,regname=selected_reg_name,
+                       fmriname=fmriname,
+                       fmrifoldername=shortfmriname)
+            else:
                 pass
             if preprocessing_type == 'HCP':
                 if level == 1 and seed_analysis_output == 'parcellated':
@@ -69,8 +72,10 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        seed_ROI_name=seed,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
                        vol_fmritcs=vol_fmritcs,confound=motion_confounds_filepath,
-                       smoothing=smoothing,regname=selected_reg_name)
-                elif statistic == 'correlation':
+                       smoothing=smoothing,regname=selected_reg_name,
+                       fmriname=fmriname,
+                       fmrifoldername=shortfmriname)
+                else:
                     pass
                 if preprocessing_type == 'HCP':
                     if level == 1 and seed_analysis_output == 'parcellated':
@@ -86,8 +91,10 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        seed_ROI_name=seed_ROI_name,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
                        vol_fmritcs=vol_fmritcs,confound=motion_confounds_filepath,
-                       smoothing=smoothing,regname=selected_reg_name)
-        elif statistic == 'correlation':
+                       smoothing=smoothing,regname=selected_reg_name,
+                       fmriname=fmriname,
+                       fmrifoldername=shortfmriname)
+        else:
             pass
         if preprocessing_type == 'HCP':
             if level == 1 and seed_analysis_output == 'parcellated':
@@ -162,9 +169,12 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               fmrifilename=fmrinames, # TODO this needs to be handled within rsfMRI_seed.py
+                               vol_finalfile='',
+                               confound='',
                                smoothing=smoothing,
-                               regname=selected_reg_name)
+                               regname=selected_reg_name,
+                               fmriname=fmrinames,
+                               fmrifoldername='rsfMRI_combined')
                     if preprocessing_type == 'HCP':
                         if seed_analysis_output == 'parcellated':
                             if text_output_format == 'csv' or text_output_format == 'CSV':
@@ -180,9 +190,12 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               fmrifilename=fmrinames, # TODO this needs to be handled within rsfMRI_seed.py
+                               vol_finalfile='',
+                               confound='',
                                smoothing=smoothing,
-                               regname=selected_reg_name)
+                               regname=selected_reg_name,
+                               fmrifilename=fmrinames,
+                               fmrifoldername='rsfMRI_combined')
                     
                     if preprocessing_type == 'HCP':
                         if seed_analysis_output == 'parcellated':
@@ -199,9 +212,12 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               fmrifilename=fmrinames, # TODO this needs to be handled within rsfMRI_seed.py
+                               vol_finalfile='',
+                               confound='',
                                smoothing=smoothing,
-                               regname=selected_reg_name)
+                               regname=selected_reg_name,
+                               fmrifilename=fmrinames,
+                               fmrifoldername='rsfMRI_combined')
             if preprocessing_type == 'HCP':
                 if seed_analysis_output == 'parcellated':
                     if text_output_format == 'csv' or text_output_format == 'CSV':
@@ -251,7 +267,9 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
 parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='NONE')
 parser.add_argument('--num_cpus', help='How many concurrent CPUs to use',default=1)
-parser.add_argument('--statistic', help='Strategy to calculate functional connectivity. Choices are "correlation" or "regression".', choices=['correlation','regression'])
+parser.add_argument('--statistic', help='Strategy to calculate functional connectivity. ' 
+                    'Choices are "correlation", "partial_correlation", "tangent", "covariance", "sparse_inverse_covariance", "precision", "sparse_inverse_precision", "regression"', 
+                    choices=['correlation','partial_correlation','regression','tangent', 'covariance', 'sparse_inverse_covariance', 'precision', 'sparse_inverse_precision'])
 
 
 # global variables
