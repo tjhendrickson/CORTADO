@@ -9,6 +9,8 @@ import numpy as np
 from glob import glob
 import subprocess
 from subprocess import Popen, PIPE
+from nilearn.connectome import ConnectivityMeasure
+from sklearn.covariance import GraphicalLassoCV
 
 class seed_analysis:
     def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level):
@@ -43,11 +45,12 @@ class seed_analysis:
         for value in parcel_file_label_tuple:
                 if not '???' in parcel_file_label_tuple[value][0]:
                         parcel_labels.append(parcel_file_label_tuple[value][0])
-        self.parcel_labels = [str(r) for r in parcel_labels]
+        self.parcel_labels = parcel_labels
+        
         
         # do tests on cifti file and load
-        self.cifti_load = self.cifti_tests()
-        
+        if self.level == 1:
+            self.cifti_tests()
     
     def cifti_tests(self):
         # does CIFTI file exist?
@@ -80,13 +83,10 @@ class seed_analysis:
             print("file does not exist")    
         # is entered CIFTI file actually a CIFTI file?
         try:
-            cifti_load = nibabel.cifti2.cifti2.load(cifti_file)
+            self.cifti_load = nibabel.cifti2.cifti2.load(cifti_file)
         except:
             print("file does not look like a cifti file")
-        return cifti_load
-    
-    
-                    
+                  
 class regression(seed_analysis):
     def __init__(self,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
         '''
@@ -245,9 +245,69 @@ class regression(seed_analysis):
         if process.returncode != 0:
             raise Exception("Non zero return code: %d"%process.returncode)  
     
-
 class pair_pair_connectivity(seed_analysis):
-    pass
+    def __init__(self,method,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
+        '''
+        Child class of seed_analysis. This performs connectivity on resting state data by:
+        1) Generating connectivity matrices with nilearn's ConnectivityMeasure module 
+        2) Metrics include correlation, partial correlation, covariance, precision, sparse covariance, and sparse precision
+        3) Extract only the functional connectivity vector associated with the inputted seed
+        4) Output as a ptseries.nii file in the same position and format as the regression class
+        '''
+        
+        self.method = method
+        self.pipeline = pipeline
+        self.ICAstring = ICAstring
+        self.vol_fmritcs = vol_finalfile
+        self.confound = confound
+        self.smoothing = smoothing
+        self.regname = regname
+        self.fmriname = fmriname
+        self.fmrifoldername = fmrifoldername
+        
+        # run create_network_matrix
+        self.create_network_matrix()
+        
+        # extract functional connectivity vector
+        self.extract_vector()
+        
+    def create_network_matrix(self):
+        cifti_np_array = np.array(self.cifti_load.get_fdata())
+        if self.method == 'correlation':
+            #Pearson correlation coefficients with LedoitWolf covariance estimator
+            measure = ConnectivityMeasure(kind='correlation')
+        elif self.method == 'covariance':
+            #LedoitWolf estimator
+            measure = ConnectivityMeasure(kind='covariance')
+        elif self.method == 'partial_correlation':
+            # Partial correlation with LedoitWolf covariance estimator
+            measure = ConnectivityMeasure(kind='partial correlation')
+        elif self.method == 'precision':
+            measure = ConnectivityMeasure(kind='precision')
+        elif 'sparse' in self.method:
+            measure = GraphicalLassoCV()
+            
+        if 'sparse' in self.method:
+            measure.fit(cifti_np_array)
+            if 'covariance' in self.method:
+                network_matrix = measure.covariance_
+            elif 'precision' in self.method:
+                network_matrix = measure.precision_
+        else:
+            network_matrix = measure.fit_transform([cifti_np_array])[0]
+        self.network_matrix = network_matrix
+    
+    def extract_vector(self):
+        df_network_matrix = pd.DataFrame(self.network_matrix)
+        df_network_matrix.columns = self.parcel_labels
+        df_network_matrix.index = self.parcel_labels
+        np_functional_vector = df_network_matrix[self.seed_ROI_name].to_numpy()
+        
+        
+        
+    
+    
+    
 
 class create_text_output(seed_analysis):
     def create_text_output(self,ICAstring,text_output_dir,level):
