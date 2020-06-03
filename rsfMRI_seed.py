@@ -13,7 +13,7 @@ from nilearn.connectome import ConnectivityMeasure
 from sklearn.covariance import GraphicalLassoCV
 
 class seed_analysis:
-    def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level):
+    def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
         '''
         Class initialization for seed based analysis. The primary purpose of this class is to:
         1) Performs tests on arguments cifti_file and parcel_file to ensure inputted arguments are in the expected format
@@ -34,6 +34,16 @@ class seed_analysis:
         # level of analysis to be done
         self.level = level
         
+        #arguments that may change depending on analysis level
+        self.pipeline = pipeline
+        self.ICAstring = ICAstring
+        self.vol_fmritcs = vol_finalfile
+        self.confound = confound
+        self.smoothing = smoothing
+        self.regname = regname
+        self.fmriname = fmriname
+        self.fmrifoldername = fmrifoldername
+        
         # create output folder if it does not exist
         if not os.path.isdir(self.output_dir):
             os.makedirs(self.output_dir)
@@ -47,10 +57,15 @@ class seed_analysis:
                         parcel_labels.append(parcel_file_label_tuple[value][0])
         self.parcel_labels = parcel_labels
         
-        
         # do tests on cifti file and load
         if self.level == 1:
             self.cifti_tests()
+            
+        if not type(self.seed_ROI_name) == str:
+            separator = "-"
+            self.seed_ROI_string = separator.join(self.seed_ROI_name)
+        else:
+            self.seed_ROI_string = self.seed_ROI_name
     
     def cifti_tests(self):
         # does CIFTI file exist?
@@ -88,7 +103,7 @@ class seed_analysis:
             print("file does not look like a cifti file")
                   
 class regression(seed_analysis):
-    def __init__(self,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
+    def __init__(self):
         '''
         Child class of seed_analysis. This performs regression on resting state data by:
         1) Extracting seed ROI/parcel timeseries
@@ -102,15 +117,6 @@ class regression(seed_analysis):
         self.lowresmesh = 32
         self.highresmesh = 164
         
-        #arguments that may change depending on analysis level
-        self.pipeline = pipeline
-        self.ICAstring = ICAstring
-        self.vol_fmritcs = vol_finalfile
-        self.confound = confound
-        self.smoothing = smoothing
-        self.regname = regname
-        self.fmriname = fmriname
-        self.fmrifoldername = fmrifoldername
         if len(self.vol_fmritcs) > 0:
             zooms = nibabel.load(self.vol_fmritcs).get_header().get_zooms()
             self.fmrires = str(int(min(zooms[:3])))
@@ -120,13 +126,7 @@ class regression(seed_analysis):
         self.DownSampleFolder=self.AtlasFolder + "/fsaverage_LR" + str(self.lowresmesh) + "k"
         self.ResultsFolder=self.AtlasFolder+"/Results"
         self.ROIsFolder=self.AtlasFolder+"/ROIs"
-        
-        if not type(self.seed_ROI_name) == str:
-            separator = "-"
-            seed_ROI_merged_string = separator.join(self.seed_ROI_name)
-            self.regressor_file = seed_ROI_merged_string + '-Regressor.txt'
-        else:
-            self.regressor_file = self.seed_ROI_name + '-Regressor.txt'
+        self.regressor_file = self.seed_ROI_string + '-Regressor.txt'
         self.write_regressor()
         
         if self.level == 1:
@@ -246,7 +246,7 @@ class regression(seed_analysis):
             raise Exception("Non zero return code: %d"%process.returncode)  
     
 class pair_pair_connectivity(seed_analysis):
-    def __init__(self,method,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
+    def __init__(self,method):
         '''
         Child class of seed_analysis. This performs connectivity on resting state data by:
         1) Generating connectivity matrices with nilearn's ConnectivityMeasure module 
@@ -256,23 +256,21 @@ class pair_pair_connectivity(seed_analysis):
         '''
         
         self.method = method
-        self.pipeline = pipeline
-        self.ICAstring = ICAstring
-        self.vol_fmritcs = vol_finalfile
-        self.confound = confound
-        self.smoothing = smoothing
-        self.regname = regname
-        self.fmriname = fmriname
-        self.fmrifoldername = fmrifoldername
         
-        # run create_network_matrix
-        self.create_network_matrix()
+        df = pd.DataFrame(self.cifti_load.get_fdata())
+        df.columns = self.parcel_labels
         
-        # extract functional connectivity vector
-        self.extract_vector()
+        # run extract_vector
+        if type(self.seed_ROI_name) == str:
+            self.extract_vector(df)
+        else:
+            df['avg'] = df[self.seed_ROI_name].mean(axis=1)
+            self.seed_ROI_name='avg'
+            self.parcel_labels=df.columns.to_list()
+            self.extract_vector(df)
         
-    def create_network_matrix(self):
-        cifti_np_array = np.array(self.cifti_load.get_fdata())
+    def extract_vector(self,df):
+        cifti_np_array = df.to_numpy()
         if self.method == 'correlation':
             #Pearson correlation coefficients with LedoitWolf covariance estimator
             measure = ConnectivityMeasure(kind='correlation')
@@ -285,8 +283,7 @@ class pair_pair_connectivity(seed_analysis):
         elif self.method == 'precision':
             measure = ConnectivityMeasure(kind='precision')
         elif 'sparse' in self.method:
-            measure = GraphicalLassoCV()
-            
+            measure = GraphicalLassoCV() 
         if 'sparse' in self.method:
             measure.fit(cifti_np_array)
             if 'covariance' in self.method:
@@ -295,24 +292,13 @@ class pair_pair_connectivity(seed_analysis):
                 network_matrix = measure.precision_
         else:
             network_matrix = measure.fit_transform([cifti_np_array])[0]
-        self.network_matrix = network_matrix
-    
-    def extract_vector(self):
-        df_network_matrix = pd.DataFrame(self.network_matrix)
+        df_network_matrix = pd.DataFrame(network_matrix)
         df_network_matrix.columns = self.parcel_labels
-        df_network_matrix.index = self.parcel_labels
         np_functional_vector = df_network_matrix[self.seed_ROI_name].to_numpy()
         
-        
-        
-    
-    
-    
-
 class create_text_output(seed_analysis):
-    def create_text_output(self,ICAstring,text_output_dir,level):
+    def create_text_output(self,text_output_dir):
         # find first level CORTADO folder for given participant and session
-        seed=self.regressor_file.split('-Regressor.txt')[0]
         print('rsfMRI_seed.py: Create Text Output ')
         print('\t-Text output folder: %s' %str(text_output_dir))
         print('\t-Cifti file: %s' %str(self.cifti_file))
@@ -320,20 +306,20 @@ class create_text_output(seed_analysis):
         print('\t-Parcel name: %s' %str(self.parcel_name))
         print('\t-Seed ROI name/s: %s' %str(self.seed_ROI_name))
         print('\t-The fmri file name: %s' %str(self.fmriname))
-        print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(ICAstring))
-        print('\t-Analysis level to output data from: %s' %str(level))
+        print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(self.ICAstring))
+        print('\t-Analysis level to output data from: %s' %str(self.level))
         
         # if file exists and subject and session have yet to be added, add to file
-        if level == 1:
-            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
-        elif level == 2:
-            output_text_file = os.path.join(text_output_dir,"rsfMRI_combined_"+self.fmriname.split('_bold_')[1] + self.parcel_name+ICAstring+'_level'+ str(level)+'_seed'+seed+".csv")
+        if self.level == 1:
+            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")
+        elif self.level == 2:
+            output_text_file = os.path.join(text_output_dir,"rsfMRI_combined_"+self.fmriname.split('_bold_')[1] + self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")
         print('\t-Output file: %s' %str(output_text_file))
         print('\n')
-        if level == 1:
-            CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+ICAstring+'_level' + str(level)+'_seed'+seed+".feat")
+        if self.level == 1:
+            CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+self.ICAstring+'_level' + str(self.level)+'_seed'+self.seed_ROI_string+".feat")
             zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
-        elif level == 2:
+        elif self.level == 2:
             CORTADO_dir = glob(os.path.join(self.output_dir,"rsfMRI_combined_*.feat"))[0]
             zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats_fixedEffects","zstat1.ptseries.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
