@@ -279,8 +279,8 @@ parser.add_argument('--reg_name',help='What type of registration do you want to 
 parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='NONE')
 parser.add_argument('--num_cpus', help='How many concurrent CPUs to use',default=1)
 parser.add_argument('--statistic', help='Strategy to calculate functional connectivity. ' 
-                    'Choices are "correlation", "partial_correlation", "tangent", "covariance", "sparse_inverse_covariance", "precision", "sparse_inverse_precision", "regression"', 
-                    choices=['correlation','partial_correlation','regression','tangent', 'covariance', 'sparse_inverse_covariance', 'precision', 'sparse_inverse_precision'])
+                    'Choices are "correlation", and "regression"', 
+                    choices=['correlation','partial_correlation','regression','tangent', 'covariance', 'sparse_inverse_covariance', 'precision', 'sparse_inverse_precision'],default='correlation')
 
 
 # global variables

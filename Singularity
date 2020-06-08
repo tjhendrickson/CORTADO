@@ -12,6 +12,7 @@ modified_files/RestfMRILevel2.sh /RestfMRILevel2.sh
 rsfMRI_seed.py /rsfMRI_seed.py
 modified_files/task-rest_level1.fsf /task-rest_level1.fsf
 modified_files/task-rest_level2.fsf /task-rest_level2.fsf
+modified_files/91282_Greyordinates.dscalar.nii /91282_Greyordinates.dscalar.nii
 
 
 %environment

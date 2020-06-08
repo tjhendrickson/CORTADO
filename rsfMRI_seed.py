@@ -82,13 +82,14 @@ class seed_analysis:
             print("file does not look like a cifti file")
     
         cifti_file_basename = os.path.basename(self.cifti_file)
-        cifti_prefix = cifti_file_basename.split(".dtseries.nii")[0]
+        cifti_prefix = cifti_file_basename.split(".")[0]
+        cifti_suffix = '.'.join(cifti_file_basename.split('.')[1:])
         os.system("/opt/workbench/bin_rh_linux64/wb_command -cifti-parcellate %s %s %s %s" 
                   % (self.cifti_file, 
                      self.parcel_file, 
                      "COLUMN", 
-                     os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + ".ptseries.nii"))
-        cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name +".ptseries.nii"
+                     os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + cifti_suffix))
+        cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + cifti_suffix
         self.cifti_file = cifti_file
         # does CIFTI file exist?
         try:
@@ -257,45 +258,68 @@ class pair_pair_connectivity(seed_analysis):
         
         self.method = method
         
-        df = pd.DataFrame(self.cifti_load.get_fdata())
-        df.columns = self.parcel_labels
-        
-        # run extract_vector
-        if type(self.seed_ROI_name) == str:
-            self.extract_vector(df)
+        if self.level == 1:
+            self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
+            self.df_cifti_load.columns = self.parcel_labels
+            
+            # run extract_vector
+            if type(self.seed_ROI_name) == str:
+                self.extract_vector()
+            else:
+                self.df_cifti_load['avg'] = df[self.seed_ROI_name].mean(axis=1)
+                self.seed_ROI_name='avg'
+                self.parcel_labels=self.df_cifti_load.columns.to_list()
+                self.extract_vector()
+        # run cifti_create_file
+        self.create_cifti_file()
+                    
+    def extract_vector(self):
+        if self.level == 1:
+            cifti_np_array = self.df_cifti_load.to_numpy()
+            if self.method == 'correlation':
+                #Pearson correlation coefficients with LedoitWolf covariance estimator
+                measure = ConnectivityMeasure(kind='correlation')
+            elif self.method == 'covariance':
+                #LedoitWolf estimator
+                measure = ConnectivityMeasure(kind='covariance')
+            elif self.method == 'partial_correlation':
+                # Partial correlation with LedoitWolf covariance estimator
+                measure = ConnectivityMeasure(kind='partial correlation')
+            elif self.method == 'precision':
+                measure = ConnectivityMeasure(kind='precision')
+            elif 'sparse' in self.method:
+                measure = GraphicalLassoCV() 
+            if 'sparse' in self.method:
+                measure.fit(cifti_np_array)
+                if 'covariance' in self.method:
+                    network_matrix = measure.covariance_
+                elif 'precision' in self.method:
+                    network_matrix = measure.precision_
+            else:
+                network_matrix = measure.fit_transform([cifti_np_array])[0]
+            df_network_matrix = pd.DataFrame(network_matrix)
+            df_network_matrix.columns = self.parcel_labels
+            self.r_functional_vector = df_network_matrix[self.seed_ROI_name].to_numpy()
+            self.z_functional_vector = np.arctanh(self.r_functional_vector)
+            
+    def create_cifti_file(self):
+        if self.level == 1:
+            grayordinate_file = '/91282_Greyordinates.dscalar.nii'
+            self.cifti_file = grayordinate_file
+            self.cifti_tests()
+            #save new image
+            new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.cifti_load.header)
+            new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.cifti_load.header)
+            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname,self.parcel_name+'_',self.ICAoutputs_level1_seed + self.seed_ROI_name,'ParcellatedStats')
+            if not os.path.isdir(new_cifti_output_folder):
+                os.makedirs(new_cifti_output_folder)
+            nibabel.cifti2.save(new_r_cifti_img,os.path.join(new_cifti_output_folder,'rstats.pscalar.nii'))
+            nibabel.cifti2.save(new_z_cifti_img,os.path.join(new_cifti_output_folder,'zstats.pscalar.nii'))
         else:
-            df['avg'] = df[self.seed_ROI_name].mean(axis=1)
-            self.seed_ROI_name='avg'
-            self.parcel_labels=df.columns.to_list()
-            self.extract_vector(df)
-        
-    def extract_vector(self,df):
-        cifti_np_array = df.to_numpy()
-        if self.method == 'correlation':
-            #Pearson correlation coefficients with LedoitWolf covariance estimator
-            measure = ConnectivityMeasure(kind='correlation')
-        elif self.method == 'covariance':
-            #LedoitWolf estimator
-            measure = ConnectivityMeasure(kind='covariance')
-        elif self.method == 'partial_correlation':
-            # Partial correlation with LedoitWolf covariance estimator
-            measure = ConnectivityMeasure(kind='partial correlation')
-        elif self.method == 'precision':
-            measure = ConnectivityMeasure(kind='precision')
-        elif 'sparse' in self.method:
-            measure = GraphicalLassoCV() 
-        if 'sparse' in self.method:
-            measure.fit(cifti_np_array)
-            if 'covariance' in self.method:
-                network_matrix = measure.covariance_
-            elif 'precision' in self.method:
-                network_matrix = measure.precision_
-        else:
-            network_matrix = measure.fit_transform([cifti_np_array])[0]
-        df_network_matrix = pd.DataFrame(network_matrix)
-        df_network_matrix.columns = self.parcel_labels
-        np_functional_vector = df_network_matrix[self.seed_ROI_name].to_numpy()
-        
+            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname,self.parcel_name+'_',self.ICAoutputs_level2_seed + self.seed_ROI_name,'ParcellatedStats')
+            if not os.path.isdir(new_cifti_output_folder):
+                os.makedirs(new_cifti_output_folder)
+            
 class create_text_output(seed_analysis):
     def create_text_output(self,text_output_dir):
         # find first level CORTADO folder for given participant and session
