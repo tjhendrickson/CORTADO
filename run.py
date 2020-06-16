@@ -56,7 +56,16 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmriname=fmriname,
                        fmrifoldername=shortfmriname)
             else:
-                pass
+                pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
+                       parcel_file=parcel_file,parcel_name=parcel_name,
+                       seed_ROI_name=seed_ROI_name,level=1,
+                       pipeline=preprocessing_type,ICAstring=ICAstring,
+                       vol_fmritcs=vol_fmritcs,
+                       confound=motion_confounds_filepath,
+                       smoothing=smoothing,regname=selected_reg_name,
+                       fmriname=fmriname,
+                       fmrifoldername=shortfmriname,
+                       method=statistic)
             if preprocessing_type == 'HCP':
                 if level == 1 and seed_analysis_output == 'parcellated':
                     if text_output_format == 'csv' or text_output_format == 'CSV':
@@ -76,7 +85,16 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmriname=fmriname,
                        fmrifoldername=shortfmriname)
                 else:
-                    pass
+                    pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
+                                           parcel_file=parcel_file,parcel_name=parcel_name,
+                                           seed_ROI_name=seed,level=1,
+                                           pipeline=preprocessing_type,ICAstring=ICAstring,
+                                           vol_fmritcs=vol_fmritcs,
+                                           confound=motion_confounds_filepath,
+                                           smoothing=smoothing,regname=selected_reg_name,
+                                           fmriname=fmriname,
+                                           fmrifoldername=shortfmriname,
+                                           method=statistic)
                 if preprocessing_type == 'HCP':
                     if level == 1 and seed_analysis_output == 'parcellated':
                         if text_output_format == 'csv' or text_output_format == 'CSV':
@@ -95,7 +113,16 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmriname=fmriname,
                        fmrifoldername=shortfmriname)
         else:
-            pass
+            pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
+                       parcel_file=parcel_file,parcel_name=parcel_name,
+                       seed_ROI_name=seed_ROI_name,level=1,
+                       pipeline=preprocessing_type,ICAstring=ICAstring,
+                       vol_fmritcs=vol_fmritcs,
+                       confound=motion_confounds_filepath,
+                       smoothing=smoothing,regname=selected_reg_name,
+                       fmriname=fmriname,
+                       fmrifoldername=shortfmriname,
+                       method=statistic)
         if preprocessing_type == 'HCP':
             if level == 1 and seed_analysis_output == 'parcellated':
                 if text_output_format == 'csv' or text_output_format == 'CSV':
@@ -177,7 +204,19 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmriname=fmrinames,
                                fmrifoldername='rsfMRI_combined')
                     else:
-                        pass
+                        pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
+                               parcel_file=parcel_file, parcel_name=parcel_name, 
+                               seed_ROI_name=seed_ROI_name,
+                               level=level,
+                               pipeline=preprocessing_type,
+                               ICAstring=ICAstring,
+                               vol_finalfile='',
+                               confound='',
+                               smoothing=smoothing,
+                               regname=selected_reg_name,
+                               fmriname=fmrinames,
+                               fmrifoldername='rsfMRI_combined',
+                               method=statistic)
                         
                     if preprocessing_type == 'HCP':
                         if seed_analysis_output == 'parcellated':
@@ -189,7 +228,7 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
             else:
                 for seed in seed_ROI_name:
                     if statistic == 'regression':
-                        regression(output_dir=output_dir,cifti_file=fmritcs, 
+                        regression(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed,
                                level=level,
@@ -202,7 +241,19 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifilename=fmrinames,
                                fmrifoldername='rsfMRI_combined')
                     else:
-                        pass
+                        pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
+                               parcel_file=parcel_file, parcel_name=parcel_name, 
+                               seed_ROI_name=seed,
+                               level=level,
+                               pipeline=preprocessing_type,
+                               ICAstring=ICAstring,
+                               vol_finalfile='',
+                               confound='',
+                               smoothing=smoothing,
+                               regname=selected_reg_name,
+                               fmrifilename=fmrinames,
+                               fmrifoldername='rsfMRI_combined',
+                               method=statistic)
                     
                     if preprocessing_type == 'HCP':
                         if seed_analysis_output == 'parcellated':
@@ -214,7 +265,7 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
         elif len(seed_ROI_name) == 1:
             seed = seed_ROI_name[0]
             if statistic == 'regression':
-                regression(output_dir=output_dir,cifti_file=fmritcs, 
+                regression(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed,
                                level=level,
@@ -227,7 +278,19 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifilename=fmrinames,
                                fmrifoldername='rsfMRI_combined')
             else:
-                pass
+                pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
+                               parcel_file=parcel_file, parcel_name=parcel_name, 
+                               seed_ROI_name=seed,
+                               level=level,
+                               pipeline=preprocessing_type,
+                               ICAstring=ICAstring,
+                               vol_finalfile='',
+                               confound='',
+                               smoothing=smoothing,
+                               regname=selected_reg_name,
+                               fmrifilename=fmrinames,
+                               fmrifoldername='rsfMRI_combined',
+                               method=statistic)
             
             if preprocessing_type == 'HCP':
                 if seed_analysis_output == 'parcellated':

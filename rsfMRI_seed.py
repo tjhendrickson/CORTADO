@@ -266,7 +266,7 @@ class pair_pair_connectivity(seed_analysis):
             if type(self.seed_ROI_name) == str:
                 self.extract_vector()
             else:
-                self.df_cifti_load['avg'] = df[self.seed_ROI_name].mean(axis=1)
+                self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
                 self.seed_ROI_name='avg'
                 self.parcel_labels=self.df_cifti_load.columns.to_list()
                 self.extract_vector()

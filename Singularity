@@ -53,7 +53,7 @@ apt-get install -yq --no-install-recommends libquadmath0 libglib2.0-0 python wge
 
 # Install anaconda2 and needed python tools
 cd /opt
-wget https://repo.continuum.io/archive/Anaconda2-2018.12-Linux-x86_64.sh -O /opt/Anaconda2.sh
+wget https://repo.anaconda.com/archive/Anaconda2-2019.10-Linux-x86_64.sh -O /opt/Anaconda2.sh
 bash /opt/Anaconda2.sh -b -p /opt/Anaconda2
 export PATH="/opt/Anaconda2/bin:${PATH}"
 /opt/Anaconda2/bin/conda install -c conda-forge nibabel=3.0.1 cifti=1.1 pandas=1.0.1 nilearn=0.6.2 scikit-learn=0.22.2.post1
