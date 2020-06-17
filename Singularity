@@ -56,7 +56,7 @@ cd /opt
 wget https://repo.anaconda.com/miniconda/Miniconda2-py27_4.8.3-Linux-x86_64.sh -O /opt/Miniconda2.sh
 bash /opt/Miniconda2.sh -b -p /opt/Miniconda2
 export PATH="/opt/Miniconda2/bin:${PATH}"
-/opt/Miniconda2/bin/conda install -c conda-forge nibabel=3.0.1 cifti=1.1 pandas=1.0.1 nilearn=0.6.2 scikit-learn=0.22.2.post1
+/opt/Miniconda2/bin/conda install -y -q -c conda-forge nibabel=3.0.1 cifti=1.1 pandas=1.0.1 nilearn=0.6.2 scikit-learn=0.22.2.post1
 
 # Install the validator 0.26.11, along with pybids 0.6.0
 apt-get update
