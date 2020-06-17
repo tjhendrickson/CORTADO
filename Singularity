@@ -48,7 +48,7 @@ touch /parcel_dlabel.nii
 
 # Install basic utilities
 apt-get -qq update
-apt-get install -yq --no-install-recommends libquadmath0 libglib2.0-0 python wget bc bzip2 ca-certificates libgomp1 perl-modules tar tcsh unzip git libgomp1 perl-modules curl libgl1-mesa-dev libfreetype6 libfreetype6-dev
+apt-get install -yq --no-install-recommends python wget bc bzip2 ca-certificates perl-modules tar tcsh unzip git curl 
 
 
 # Install anaconda2 and needed python tools
