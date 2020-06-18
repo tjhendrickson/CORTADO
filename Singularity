@@ -51,12 +51,12 @@ apt-get -qq update
 apt-get install -yq --no-install-recommends libquadmath0 libglib2.0-0 python wget bc bzip2 ca-certificates libgomp1 tar tcsh unzip git libgomp1 perl-modules curl libgl1-mesa-dev libfreetype6 libfreetype6-dev
 
 
-# Install miniconda2 and needed python tools
+# Install Miniconda3 and needed python tools
 cd /opt
-wget https://repo.anaconda.com/miniconda/Miniconda2-py27_4.8.3-Linux-x86_64.sh -O /opt/Miniconda2.sh
-bash /opt/Miniconda2.sh -b -p /opt/Miniconda2
-export PATH="/opt/Miniconda2/bin:${PATH}"
-/opt/Miniconda2/bin/conda install -y -q -c conda-forge nibabel=3.0.1 cifti=1.1 pandas=1.0.1 nilearn=0.6.2 scikit-learn=0.22.2.post1
+wget https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-Linux-x86_64.sh -O /opt/Miniconda3.sh
+bash /opt/Miniconda3.sh -b -p /opt/Miniconda3
+export PATH="/opt/Miniconda3/bin:${PATH}"
+/opt/Miniconda3/bin/conda install -y -q -c conda-forge nibabel=3.0.1 cifti=1.1 pandas=1.0.1 nilearn=0.6.2 scikit-learn=0.22.2.post1
 
 # Install the validator 0.26.11, along with pybids 0.6.0
 apt-get update
@@ -65,7 +65,7 @@ curl -sL https://deb.nodesource.com/setup_10.x | bash -
 apt-get remove -y curl
 apt-get install -y nodejs
 npm install -g bids-validator@0.26.11
-/opt/Miniconda2/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
+/opt/Miniconda3/bin/pip install git+https://github.com/INCF/pybids.git@0.6.0
 
 # Install Connectome Workbench version 1.3.2
 apt-get update
