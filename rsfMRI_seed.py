@@ -11,9 +11,10 @@ import subprocess
 from subprocess import Popen, PIPE
 from nilearn.connectome import ConnectivityMeasure
 from sklearn.covariance import GraphicalLassoCV
+import pdb
 
 class seed_analysis:
-    def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_finalfile,confound,smoothing,regname,fmriname,fmrifoldername):
+    def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_fmritcs,confound,smoothing,regname,fmriname,fmrifoldername,seed_analysis_output):
         '''
         Class initialization for seed based analysis. The primary purpose of this class is to:
         1) Performs tests on arguments cifti_file and parcel_file to ensure inputted arguments are in the expected format
@@ -23,7 +24,8 @@ class seed_analysis:
         self.output_dir = output_dir
         # inputted cifti file
         self.cifti_file = cifti_file
-        self.shortfmriname=self.cifti_file.split("/")[-2]
+        if len(self.cifti_file) > 0:
+            self.shortfmriname=self.cifti_file.split("/")[-2]
         # inputted atlas/parcellation file
         self.parcel_file = parcel_file
         # shorthand name chosen for parcel file
@@ -37,12 +39,13 @@ class seed_analysis:
         #arguments that may change depending on analysis level
         self.pipeline = pipeline
         self.ICAstring = ICAstring
-        self.vol_fmritcs = vol_finalfile
+        self.vol_fmritcs = vol_fmritcs
         self.confound = confound
         self.smoothing = smoothing
         self.regname = regname
         self.fmriname = fmriname
         self.fmrifoldername = fmrifoldername
+        self.seed_analysis_output = seed_analysis_output
         
         # create output folder if it does not exist
         if not os.path.isdir(self.output_dir):
@@ -56,14 +59,16 @@ class seed_analysis:
                 if not '???' in parcel_file_label_tuple[value][0]:
                         parcel_labels.append(parcel_file_label_tuple[value][0])
         self.parcel_labels = parcel_labels
-        
         # do tests on cifti file and load
         if self.level == 1:
             self.cifti_tests()
-            
-        if not type(self.seed_ROI_name) == str:
-            separator = "-"
-            self.seed_ROI_string = separator.join(self.seed_ROI_name)
+        # inputted argument 'seed_ROI_name' is a list, if longer than 1 parse otherwise do not
+        if type(self.seed_ROI_name) == list:
+            if len(self.seed_ROI_name) > 1:
+                separator = "-"
+                self.seed_ROI_string = separator.join(self.seed_ROI_name)
+            else:
+                self.seed_ROI_string = self.seed_ROI_name[0]
         else:
             self.seed_ROI_string = self.seed_ROI_name
     
@@ -80,31 +85,34 @@ class seed_analysis:
             cifti_load = nibabel.cifti2.cifti2.load(self.cifti_file)
         except:
             print("file does not look like a cifti file")
-    
         cifti_file_basename = os.path.basename(self.cifti_file)
         cifti_prefix = cifti_file_basename.split(".")[0]
-        cifti_suffix = '.'.join(cifti_file_basename.split('.')[1:])
+        cifti_suffix = '.'.join(cifti_file_basename.split(".")[1:])
+        if cifti_suffix == 'dtseries.nii':
+            new_cifti_suffix = '.ptseries.nii'
+        elif cifti_suffix == 'dscalar.nii':
+            new_cifti_suffix = '.pscalar.nii'
         os.system("/opt/workbench/bin_rh_linux64/wb_command -cifti-parcellate %s %s %s %s" 
                   % (self.cifti_file, 
                      self.parcel_file, 
                      "COLUMN", 
-                     os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + cifti_suffix))
-        cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + cifti_suffix
-        self.cifti_file = cifti_file
+                     os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + new_cifti_suffix))
+        parcellated_cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + new_cifti_suffix
+        self.parcellated_cifti_file = parcellated_cifti_file
         # does CIFTI file exist?
         try:
-            read_cifti = open(cifti_file)
+            read_cifti = open(self.parcellated_cifti_file)
             read_cifti.close()
         except IOError:
             print("file does not exist")    
         # is entered CIFTI file actually a CIFTI file?
         try:
-            self.cifti_load = nibabel.cifti2.cifti2.load(cifti_file)
+            self.parcellated_cifti_load = nibabel.cifti2.cifti2.load(self.parcellated_cifti_file)
         except:
             print("file does not look like a cifti file")
                   
 class regression(seed_analysis):
-    def __init__(self):
+    def setup(self):
         '''
         Child class of seed_analysis. This performs regression on resting state data by:
         1) Extracting seed ROI/parcel timeseries
@@ -112,12 +120,12 @@ class regression(seed_analysis):
         3) Use the targeted ROI timeseries as the dependent measure
         4) Calculate the parameter estimate as a proxy measure of seed based connectivity
         '''
-        
         # hardcoded arguments
         self.highpass = "2000"
         self.lowresmesh = 32
         self.highresmesh = 164
         
+        # if length of vol_fmritcs is greater then 0, retreive zooms. Pair_pair_connectivity does not require zooms and vol_fmritcs is blank
         if len(self.vol_fmritcs) > 0:
             zooms = nibabel.load(self.vol_fmritcs).get_header().get_zooms()
             self.fmrires = str(int(min(zooms[:3])))
@@ -127,31 +135,41 @@ class regression(seed_analysis):
         self.DownSampleFolder=self.AtlasFolder + "/fsaverage_LR" + str(self.lowresmesh) + "k"
         self.ResultsFolder=self.AtlasFolder+"/Results"
         self.ROIsFolder=self.AtlasFolder+"/ROIs"
-        self.regressor_file = self.seed_ROI_string + '-Regressor.txt'
-        self.write_regressor()
         
         if self.level == 1:
+            self.regressor_file = self.seed_ROI_string + '-Regressor.txt'
+            self.write_regressor()
+            if self.seed_analysis_output == 'dense':
+                # change parcel file and parcel names to NONE
+                self.parcel_file = 'NONE'
+                self.parcel_name = 'NONE'
             self.run_regression_level1()
         else:
+            # convert list to string expected by RestfMRILevel2.sh
+            self.fmriname = '@'.join(str(i) for i in self.fmriname)
+            self.level_2_foldername = 'rsfMRI_combined'
+            if self.seed_analysis_output == 'dense':
+                # change parcel file and parcel names to NONE
+                self.parcel_file = 'NONE'
+                self.parcel_name = 'NONE'
             self.run_regression_level2()
     
-    def run_regression_level1(self):
+    def run_regression_level1(self): 
         os.system("export PATH=/usr/local/fsl/bin:${PATH}")
         fsf_creation = '/generate_level1_fsf.sh ' + \
             '--taskname="{fmriname}" ' + \
             '--temporalfilter="{highpass}" ' + \
             '--originalsmoothing="{fmrires}" ' + \
             '--outdir="{outdir}" '
-        fsf_creation = fsf_creation.format(fmriname=self.fmriname,highpass=self.highpass,
-                                           fmrires=self.fmrires,outdir=self.output_dir)
-        self.run(fsf_creation, cwd=self.output_dir)
+        fsf_creation = fsf_creation.format(fmriname=self.fmriname,highpass=self.highpass,fmrires=self.fmrires,outdir=self.output_dir)
+        self.run(fsf_creation)
         
         generate_regression = '/RestfMRILevel1.sh ' + \
             '--outdir={outdir} ' + \
             '--ICAoutputs={ICAstring} ' + \
             '--pipeline={pipeline} ' + \
             '--finalfile={finalfile} ' + \
-            '--volfinalfile={vol_finalfile} ' + \
+            '--volfinalfile={vol_fmritcs} ' + \
             '--fmrifilename={fmrifilename} ' + \
             '--fmrifoldername={fmrifoldername} ' + \
             '--DownSampleFolder={DownSampleFolder} ' + \
@@ -169,16 +187,17 @@ class regression(seed_analysis):
             '--seedROI={seedROI}'
         generate_regression = generate_regression.format(outdir=self.output_dir,ICAstring=self.ICAstring,
                                                          pipeline=self.pipeline,finalfile=self.cifti_file,
-                                                         vol_finalfile=self.vol_finalfile,fmrifilename=self.fmriname,
+                                                         vol_fmritcs=self.vol_fmritcs,fmrifilename=self.fmriname,
                                                          fmrifoldername=self.fmrifoldername,DownSampleFolder=self.DownSampleFolder,
                                                          ResultsFolder=self.ResultsFolder,ROIsFolder=self.ROIsFolder,
                                                          lowresmesh=self.lowresmesh,fmrires=self.fmrires,
                                                          confound=self.confound,temporal_filter=self.highpass,
                                                          smoothing=self.smoothing,regname=self.regname,
-                                                         parcel_name=self.parcel_name,parcel_file=self.parcel_file,seedROI=self.seed_ROI_name)
-        self.run(generate_regression, cwd=self.output_dir)
+                                                         parcel_name=self.parcel_name,parcel_file=self.parcel_file,seedROI=self.seed_ROI_string)
+        self.run(generate_regression)
     
     def run_regression_level2(self):
+        
         os.system("export PATH=/usr/local/fsl/bin:${PATH}")
         fsf_creation = '/generate_level2_fsf.sh ' + \
             '--taskname="{fmriname}" ' + \
@@ -187,7 +206,7 @@ class regression(seed_analysis):
             '--outdir="{outdir}" '
         fsf_creation = fsf_creation.format(fmriname=self.level_2_foldername, highpass=self.highpass,
                                            fmrires=self.fmrires,outdir=self.output_dir)
-        self.run(fsf_creation, cwd=self.output_dir)
+        self.run(fsf_creation)
 
         generate_regression = '/RestfMRILevel2.sh ' + \
             '--outdir={outdir} ' + \
@@ -204,50 +223,50 @@ class regression(seed_analysis):
                                                          pipeline=self.pipeline,fmrifilename=self.fmriname,
                                                          level_2_foldername=self.level_2_foldername,
                                                          smoothing=self.smoothing,temporal_filter=self.highpass,
-                                                         reg_name=self.regname,parcel_name=self.parcel_name,
-                                                         seedROI=self.seedROI)
-        self.run(generate_regression, cwd=self.output_dir)
+                                                         regname=self.regname,parcel_name=self.parcel_name,
+                                                         seedROI=self.seed_ROI_string)
+        self.run(generate_regression)
              
     def write_regressor(self):
         print('rsfMRI_seed.py: Create regressor file ')
         print('\t-Output folder: ' + self.output_dir)
         print('\t-Cifti file: ' + self.cifti_file)
         print('\t-Parcel file: ' + self.parcel_file)
-        print('\t-Seed ROI name: ' + str(self.seed_ROI_name))
-        
+        print('\t-Seed ROI name: ' + str(self.seed_ROI_string))
         # path that regressor file will be outputted to
         regressor_file_path = os.path.join(self.output_dir,self.regressor_file)
         #create regressor file
-        df = pd.DataFrame(self.cifti_load.get_fdata())
+        df = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
         df.columns = self.parcel_labels
-        if type(self.seed_ROI_name) == str:
-            df.to_csv(regressor_file_path,header=False,index=False,columns=[self.seed_ROI_name],sep=' ')
+        if type(self.seed_ROI_name) == list:
+            if len(self.seed_ROI_name) == 1:
+                df.to_csv(regressor_file_path,header=False,index=False,columns=[self.seed_ROI_string],sep=' ')
+            else:
+                df['avg'] = df[self.seed_ROI_name].mean(axis=1)
+                df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
         else:
-            df['avg'] = df[self.seed_ROI_name].mean(axis=1)
-            df.to_csv(regressor_file_path,header=False,index=False,columns=['avg'],sep=' ')
+            df.to_csv(regressor_file_path,header=False,index=False,columns=[self.seed_ROI_string],sep=' ')
         # figure out what name of regressor file should be
         print('\t-Regressor file: %s' %regressor_file_path)
         print('\n') 
         return regressor_file_path
             
-    def run(command, env={}, cwd=None):
+    def run(self,command):
         merged_env = os.environ
-        merged_env.update(env)
         merged_env.pop("DEBUG", None)
         print(command)
-        process = Popen(command, stdout=PIPE, stderr=subprocess.STDOUT,
-                        shell=True, env=merged_env, cwd=cwd)
+        process = Popen(command, stdout=PIPE, stderr=subprocess.STDOUT,shell=True)
         while True:
             line = process.stdout.readline()
+            line = str(line, 'utf-8')[:-1]
             print(line)
-            line = str(line)[:-1]
-            if line == '' and process.poll() != None:
+            if line == '' and process.poll() is not None:
                 break
         if process.returncode != 0:
-            raise Exception("Non zero return code: %d"%process.returncode)  
+            raise Exception("Non zero return code: %d"%process.returncode)
     
 class pair_pair_connectivity(seed_analysis):
-    def __init__(self,method):
+    def __init__(self,output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_fmritcs,confound,smoothing,regname,fmriname,fmrifoldername,seed_analysis_output,method):
         '''
         Child class of seed_analysis. This performs connectivity on resting state data by:
         1) Generating connectivity matrices with nilearn's ConnectivityMeasure module 
@@ -255,15 +274,18 @@ class pair_pair_connectivity(seed_analysis):
         3) Extract only the functional connectivity vector associated with the inputted seed
         4) Output as a ptseries.nii file in the same position and format as the regression class
         '''
-        
+        # execute super class seed_analysis
+        super().__init__(output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_fmritcs,confound,smoothing,regname,fmriname,fmrifoldername,seed_analysis_output)
         self.method = method
-        
         if self.level == 1:
-            self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
-            self.df_cifti_load.columns = self.parcel_labels
-            
+            if self.seed_analysis_output == 'parcellated':
+                # generate pandas df from parcellated time series if parcel file is not none
+                self.df_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
+                self.df_cifti_load.columns = self.parcel_labels
+            else:
+                self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
             # run extract_vector
-            if type(self.seed_ROI_name) == str:
+            if len(self.seed_ROI_name) == 1:
                 self.extract_vector()
             else:
                 self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
@@ -299,24 +321,26 @@ class pair_pair_connectivity(seed_analysis):
                 network_matrix = measure.fit_transform([cifti_np_array])[0]
             df_network_matrix = pd.DataFrame(network_matrix)
             df_network_matrix.columns = self.parcel_labels
-            self.r_functional_vector = df_network_matrix[self.seed_ROI_name].to_numpy()
+            self.r_functional_vector = df_network_matrix[self.seed_ROI_string].to_numpy()
             self.z_functional_vector = np.arctanh(self.r_functional_vector)
             
     def create_cifti_file(self):
         if self.level == 1:
-            grayordinate_file = '/91282_Greyordinates.dscalar.nii'
+            # parcellate 91282 grayordinate dscalar file and parcellate. Use header information for newly created zstat and rstat pscalars
+            grayordinate_file = '/ones.dscalar.nii'
             self.cifti_file = grayordinate_file
             self.cifti_tests()
-            #save new image
-            new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.cifti_load.header)
-            new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.cifti_load.header)
-            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname,self.parcel_name+'_',self.ICAoutputs_level1_seed + self.seed_ROI_name,'ParcellatedStats')
+            #save new images
+            new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.parcellated_cifti_load.header)
+            new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.parcellated_cifti_load.header)
+            pdb.set_trace()
+            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname+'_'+self.parcel_name+self.ICAstring+'_level1_seed' + self.seed_ROI_string+'.feat','ParcellatedStats')
             if not os.path.isdir(new_cifti_output_folder):
                 os.makedirs(new_cifti_output_folder)
             nibabel.cifti2.save(new_r_cifti_img,os.path.join(new_cifti_output_folder,'rstats.pscalar.nii'))
             nibabel.cifti2.save(new_z_cifti_img,os.path.join(new_cifti_output_folder,'zstats.pscalar.nii'))
         else:
-            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname,self.parcel_name+'_',self.ICAoutputs_level2_seed + self.seed_ROI_name,'ParcellatedStats')
+            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname+'_'+self.parcel_name+self.ICAstring+'_level2_seed' + self.seed_ROI_string+'.feat','ParcellatedStats')
             if not os.path.isdir(new_cifti_output_folder):
                 os.makedirs(new_cifti_output_folder)
             

@@ -8,6 +8,7 @@ from functools import partial
 from rsfMRI_seed import regression, pair_pair_connectivity
 from multiprocessing import Pool, Lock
 import time
+import pdb
 
 def generate_motion_confounds(vol_fmritcs,base_folder,fmritcs,selected_reg_name):
     shortfmriname=base_folder.split('/')[-1]
@@ -46,7 +47,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
     if len(seed_ROI_name) > 1:
         if seed_handling == "together":
             if statistic == 'regression':
-                regression(output_dir=output_dir,cifti_file=fmritcs,
+                run_regression = regression(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
                        seed_ROI_name=seed_ROI_name,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
@@ -54,7 +55,9 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        confound=motion_confounds_filepath,
                        smoothing=smoothing,regname=selected_reg_name,
                        fmriname=fmriname,
-                       fmrifoldername=shortfmriname)
+                       fmrifoldername=shortfmriname,
+                       seed_analysis_output=seed_analysis_output)
+                run_regression.setup()
             else:
                 pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
@@ -65,6 +68,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        smoothing=smoothing,regname=selected_reg_name,
                        fmriname=fmriname,
                        fmrifoldername=shortfmriname,
+                       seed_analysis_output=seed_analysis_output,
                        method=statistic)
             if preprocessing_type == 'HCP':
                 if level == 1 and seed_analysis_output == 'parcellated':
@@ -76,14 +80,16 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
         else:
             for seed in seed_ROI_name:
                 if statistic == 'regression':
-                    regression(output_dir=output_dir,cifti_file=fmritcs,
+                    run_regression = regression(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
                        seed_ROI_name=seed,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
                        vol_fmritcs=vol_fmritcs,confound=motion_confounds_filepath,
                        smoothing=smoothing,regname=selected_reg_name,
                        fmriname=fmriname,
-                       fmrifoldername=shortfmriname)
+                       fmrifoldername=shortfmriname,
+                       seed_analysis_output=seed_analysis_output)
+                    run_regression.setup()
                 else:
                     pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
                                            parcel_file=parcel_file,parcel_name=parcel_name,
@@ -94,6 +100,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                                            smoothing=smoothing,regname=selected_reg_name,
                                            fmriname=fmriname,
                                            fmrifoldername=shortfmriname,
+                                           seed_analysis_output=seed_analysis_output,
                                            method=statistic)
                 if preprocessing_type == 'HCP':
                     if level == 1 and seed_analysis_output == 'parcellated':
@@ -104,14 +111,16 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                             time.sleep(1)
     elif len(seed_ROI_name) == 1:
         if statistic == 'regression':
-            regression(output_dir=output_dir,cifti_file=fmritcs,
+            run_regression = regression(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
                        seed_ROI_name=seed_ROI_name,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
                        vol_fmritcs=vol_fmritcs,confound=motion_confounds_filepath,
                        smoothing=smoothing,regname=selected_reg_name,
                        fmriname=fmriname,
-                       fmrifoldername=shortfmriname)
+                       fmrifoldername=shortfmriname,
+                       seed_analysis_output=seed_analysis_output)
+            run_regression.setup()
         else:
             pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
@@ -122,6 +131,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        smoothing=smoothing,regname=selected_reg_name,
                        fmriname=fmriname,
                        fmrifoldername=shortfmriname,
+                       seed_analysis_output=seed_analysis_output,
                        method=statistic)
         if preprocessing_type == 'HCP':
             if level == 1 and seed_analysis_output == 'parcellated':
@@ -167,42 +177,40 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
         fmrinames = []
         for fmritcs in bold:
             first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
-                                            seed_ROI_name=seed_ROI_name,
-                                            seed_handling=seed_handling,
-                                            ICAstring=ICAstring,
-                                            statistic=statistic,
-                                            motion_confounds=motion_confounds,
-                                            preprocessing_type=preprocessing_type,
-                                            vol_fmritcs=vol_fmritcs,
-                                            seed_analysis_output=seed_analysis_output,
-                                            level=level,
-                                            text_output_format=text_output_format,
-                                            smoothing=smoothing,
-                                            parcel_file=parcel_file,
-                                            parcel_name=parcel_name,
-                                            selected_reg_name=selected_reg_name,
-                                            ICAoutputs=ICAoutputs)
+                seed_ROI_name=seed_ROI_name,
+                seed_handling=seed_handling,
+                ICAstring=ICAstring,
+                statistic=statistic,
+                motion_confounds=motion_confounds,
+                preprocessing_type=preprocessing_type,
+                vol_fmritcs=vol_fmritcs,
+                seed_analysis_output=seed_analysis_output,
+                level=level,
+                text_output_format=text_output_format,
+                smoothing=smoothing,
+                parcel_file=parcel_file,
+                parcel_name=parcel_name,
+                selected_reg_name=selected_reg_name)
             fmriname = os.path.basename(fmritcs).split(".")[0] 
             fmrinames.append(fmriname)
-        
         if len(seed_ROI_name) > 1:
             if seed_handling == "together":
                 if preprocessing_type == 'HCP':
                     if statistic == 'regression':
-                        # convert list to string expected by RestfMRILevel2.sh
-                        fmrinames = '@'.join(str(i) for i in fmrinames)
-                        regression(output_dir=output_dir,cifti_file='', 
+                        run_regression = regression(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed_ROI_name,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               vol_finalfile='',
+                               vol_fmritcs=vol_fmritcs,
                                confound='',
                                smoothing=smoothing,
                                regname=selected_reg_name,
                                fmriname=fmrinames,
-                               fmrifoldername='rsfMRI_combined')
+                               fmrifoldername='rsfMRI_combined',
+                               seed_analysis_output=seed_analysis_output)
+                        run_regression.setup()
                     else:
                         pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
@@ -210,12 +218,13 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               vol_finalfile='',
+                               vol_fmritcs='',
                                confound='',
                                smoothing=smoothing,
                                regname=selected_reg_name,
                                fmriname=fmrinames,
                                fmrifoldername='rsfMRI_combined',
+                               seed_analysis_output=seed_analysis_output,
                                method=statistic)
                         
                     if preprocessing_type == 'HCP':
@@ -228,18 +237,20 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
             else:
                 for seed in seed_ROI_name:
                     if statistic == 'regression':
-                        regression(output_dir=output_dir,cifti_file='', 
+                        run_regression = regression(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               vol_finalfile='',
+                               vol_fmritcs=vol_fmritcs,
                                confound='',
                                smoothing=smoothing,
                                regname=selected_reg_name,
-                               fmrifilename=fmrinames,
-                               fmrifoldername='rsfMRI_combined')
+                               fmriname=fmrinames,
+                               fmrifoldername='rsfMRI_combined',
+                               seed_analysis_output=seed_analysis_output)
+                        run_regression.setup()
                     else:
                         pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
@@ -247,12 +258,13 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               vol_finalfile='',
+                               vol_fmritcs='',
                                confound='',
                                smoothing=smoothing,
                                regname=selected_reg_name,
-                               fmrifilename=fmrinames,
+                               fmriname=fmrinames,
                                fmrifoldername='rsfMRI_combined',
+                               seed_analysis_output=seed_analysis_output,
                                method=statistic)
                     
                     if preprocessing_type == 'HCP':
@@ -263,24 +275,25 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                 l.release()
                                 time.sleep(1)
         elif len(seed_ROI_name) == 1:
-            seed = seed_ROI_name[0]
             if statistic == 'regression':
-                regression(output_dir=output_dir,cifti_file='', 
+                run_regression = regression(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
-                               seed_ROI_name=seed,
+                               seed_ROI_name=seed_ROI_name,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
-                               vol_finalfile='',
+                               vol_fmritcs=vol_fmritcs,
                                confound='',
                                smoothing=smoothing,
                                regname=selected_reg_name,
-                               fmrifilename=fmrinames,
-                               fmrifoldername='rsfMRI_combined')
+                               fmriname=fmrinames,
+                               fmrifoldername='rsfMRI_combined',
+                               seed_analysis_output=seed_analysis_output)
+                run_regression.setup()
             else:
                 pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
-                               seed_ROI_name=seed,
+                               seed_ROI_name=seed_ROI_name,
                                level=level,
                                pipeline=preprocessing_type,
                                ICAstring=ICAstring,
@@ -288,8 +301,9 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                confound='',
                                smoothing=smoothing,
                                regname=selected_reg_name,
-                               fmrifilename=fmrinames,
+                               fmriname=fmrinames,
                                fmrifoldername='rsfMRI_combined',
+                               seed_analysis_output=seed_analysis_output,
                                method=statistic)
             
             if preprocessing_type == 'HCP':
@@ -314,24 +328,23 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                             smoothing=smoothing,
                                             parcel_file=parcel_file,
                                             parcel_name=parcel_name,
-                                            selected_reg_name=selected_reg_name,
-                                            ICAoutputs=ICAoutputs)
+                                            selected_reg_name=selected_reg_name)
     
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('input_dir', help='The directory where the preprocessed derivative needed live')
-parser.add_argument('output_dir', help='The directory where the output files should be stored.')
+parser.add_argument('--input_dir', help='The directory where the preprocessed derivative needed live',required=True)
+parser.add_argument('--output_dir', help='The directory where the output files should be stored.',required=True)
 parser.add_argument('--preprocessing_type', help='BIDS-apps preprocessing pipeline run on data. Choices include "HCP" and "fmriprep". ',choices=['HCP','fmriprep'],default='HCP')
 parser.add_argument('--use_ICA_outputs',help='Use ICA (whether FIX or AROMA) outputs in seed analysis. Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='Yes')
 parser.add_argument('--combine_resting_scans',help='If multiple of the same resting state BIDS file type exist should they be combined prior seed analysis? Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='No')
 parser.add_argument('--smoothing',help="What FWHM smoothing (in mm) to apply to final output",default=4, type=int)
-parser.add_argument('--parcellation_file', help='The CIFTI label file to use or used to parcellate the brain. ', default='NONE')
-parser.add_argument('--parcellation_name', help='Shorthand name of the CIFTI label file. ', default='NONE')
-parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s from CIFTI label file to be used as the seed ROI/s. The exact ROI from the label file must be known!', nargs="+")
+parser.add_argument('--parcellation_file', help='The CIFTI label/atlas file to use or used to parcellate the brain. ', required=True)
+parser.add_argument('--parcellation_name', help='Shorthand name of the CIFTI label file. ', required=True)
+parser.add_argument('--seed_ROI_name', help='Space separated list of ROI name/s from CIFTI label file to be used as the seed ROI/s. The exact ROI from the label file must be known!', nargs="+",required=True)
 parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do you want to treat them as together (i.e. averaging ROIs together), or separate (run separate seed based analyses for each ROI)? '
                                         'Choices are "together", or "separate". Default argument is "separate".',
                                         choices=['together', 'separate'],
                                         default='separate')
-parser.add_argument('--seed_analysis_output',help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',choices = ['dense','parcellated'], default = 'dense')
+parser.add_argument('--seed_analysis_output',help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',choices = ['dense','parcellated'], default = 'parcellated')
 parser.add_argument('--motion_confounds',help='What type of motion confounds to use, if any. Choices are "Movement_Regressors" (motion rotation angles and translations in mm), '
                                         ' "Movement_Regressors_dt" (detrended motion rotation angles and translations in mm), "Movement_Regressors_demean" (demeaned motion rotation angles and translations in mm) "Movement_RelativeRMS" (RMS intensity difference of volume N to the reference volume), '
                                         ' "Movement_RelativeRMS_mean" (square of RMS intensity difference of volume N to the reference volume), "Movement_AbsoluteRMS" (absolute RMS intensity difference of volume N to the reference volume, '
@@ -339,7 +352,7 @@ parser.add_argument('--motion_confounds',help='What type of motion confounds to 
                                         ' "fd" ( frame displacement (average of rotation and translation parameter differences - using weighted scaling, as in Power et al.))',
                                         choices = ['NONE','Movement_Regressors','Movement_Regressors_dt','Movement_RelativeRMS','Movement_RelativeRMS_mean','Movement_AbsoluteRMS','Movement_AbsoluteRMS_mean','dvars','fd'],default='NONE')
 parser.add_argument('--reg_name',help='What type of registration do you want to use? Choices are "MSMAll_2_d40_WRN" and "NONE"',choices = ['NONE','MSMAll_2_d40_WRN'],default='MSMAll_2_d40_WRN')
-parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='NONE')
+parser.add_argument('--text_output_format',help='What format should the text output be in? Choices are "CSV" or "NONE"', choices=['CSV',"csv",'none','NONE'],default='CSV')
 parser.add_argument('--num_cpus', help='How many concurrent CPUs to use',default=1)
 parser.add_argument('--statistic', help='Strategy to calculate functional connectivity. ' 
                     'Choices are "correlation", and "regression"', 
@@ -386,16 +399,8 @@ print('\t-Seed analysis output: %s' %str(args.seed_analysis_output))
 if args.seed_analysis_output == 'dense':
     print('\t-Spatial smoothing applied: %smm' %str(args.smoothing))
 elif args.seed_analysis_output == 'parcellated':
-    if args.parcellation_file == 'NONE':
-        print('\n')
-        raise ValueError('Parcellating output selected but no parcel file specified after argument "--parcellation_file". Exiting.')
-    else:
-        print('\t-Parcellation file to be used to parcellate outputs: %s' %str(args.parcellation_file))
-    if args.parcellation_name == 'NONE':
-        print('\n')
-        raise ValueError('Parcellating output selected but no parcel name specified after argument "--parcellation_name". Exiting.')
-    else:
-        print('\t-Short hand parcellation name to be used: %s' %str(args.parcellation_name))
+    print('\t-Parcellation file to be used to parcellate outputs: %s' %str(args.parcellation_file))
+    print('\t-Short hand parcellation name to be used: %s' %str(args.parcellation_name))
 print('\t-Statistic to use for functional connectivity: %s' %str(args.statistic))
 print('\t-Input registration file to be used: %s' %str(args.reg_name))
 print('\t-Whether motion confounds will be used for output: %s' %str(args.motion_confounds))
@@ -433,26 +438,42 @@ if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
             ICAstring=""
             bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
         bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
-    multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
-                               preprocessing_type=args.preprocessing_type,
-                               smoothing=args.smoothing,
-                               parcel_file=args.parcellation_file,
-                               parcel_name=args.parcellation_name,
-                               seed_ROI_name=args.seed_ROI_name,
-                               seed_handling=args.seed_handling,
-                               seed_analysis_output=args.seed_analysis_output,
-                               text_output_format=args.text_output_format,
-                               selected_reg_name=args.selected_reg_name,
-                               motion_confounds=args.motion_confounds,
-                               ICAoutputs=ICAoutputs,
-                               combine_resting_scans=args.combine_resting_scans,
-                               output_dir=args.output_dir,
-                               statistic=args.statistic),
-                sorted(bolds))
+    # multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
+    #                            preprocessing_type=args.preprocessing_type,
+    #                            smoothing=args.smoothing,
+    #                            parcel_file=args.parcellation_file,
+    #                            parcel_name=args.parcellation_name,
+    #                            seed_ROI_name=args.seed_ROI_name,
+    #                            seed_handling=args.seed_handling,
+    #                            seed_analysis_output=args.seed_analysis_output,
+    #                            text_output_format=args.text_output_format,
+    #                            selected_reg_name=args.reg_name,
+    #                            motion_confounds=args.motion_confounds,
+    #                            ICAoutputs=ICAoutputs,
+    #                            combine_resting_scans=args.combine_resting_scans,
+    #                            output_dir=args.output_dir,
+    #                            statistic=args.statistic),
+    #             sorted(bolds))
+    run_CORTADO(bold=bolds[0],ICAstring=ICAstring, 
+        preprocessing_type=args.preprocessing_type,
+        smoothing=args.smoothing,
+        parcel_file=args.parcellation_file,
+        parcel_name=args.parcellation_name,
+        seed_ROI_name=args.seed_ROI_name,
+        seed_handling=args.seed_handling,
+        seed_analysis_output=args.seed_analysis_output,
+        text_output_format=args.text_output_format,
+        selected_reg_name=args.reg_name,
+        motion_confounds=args.motion_confounds,
+        ICAoutputs=ICAoutputs,
+        combine_resting_scans=args.combine_resting_scans,
+        output_dir=args.output_dir,
+        statistic=args.statistic)
 else:
+
     combined_bolds_list = []
     # if there are any sessions, parse data this way
-    if layout.get_sessions() > 0:
+    if len(layout.get_sessions()) > 0:
         for scanning_session in layout.get_sessions():
             # retreive subject id that is associated with session id and parse data with subject and session id
             for subject in layout.get_subjects(session=scanning_session):
@@ -512,20 +533,35 @@ else:
                 bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
             if len(bolds) == 2:
                 combined_bolds_list.append(bolds)
-    multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
-                           preprocessing_type=args.preprocessing_type,
-                           smoothing=args.smoothing,
-                           parcel_file=args.parcellation_file,
-                           parcel_name=args.parcellation_name,
-                           seed_ROI_name=args.seed_ROI_name,
-                           seed_handling=args.seed_handling,
-                           seed_analysis_output=args.seed_analysis_output,
-                           text_output_format=args.text_output_format,
-                           selected_reg_name=args.selected_reg_name,
-                           motion_confounds=args.motion_confounds,
-                           ICAoutputs=ICAoutputs,
-                           combine_resting_scans=args.combine_resting_scans,
-                           output_dir=args.output_dir,
-                           statistic=args.statistic),
-    sorted(combined_bolds_list))
+    # multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
+    #                        preprocessing_type=args.preprocessing_type,
+    #                        smoothing=args.smoothing,
+    #                        parcel_file=args.parcellation_file,
+    #                        parcel_name=args.parcellation_name,
+    #                        seed_ROI_name=args.seed_ROI_name,
+    #                        seed_handling=args.seed_handling,
+    #                        seed_analysis_output=args.seed_analysis_output,
+    #                        text_output_format=args.text_output_format,
+    #                        selected_reg_name=args.reg_name,
+    #                        motion_confounds=args.motion_confounds,
+    #                        ICAoutputs=ICAoutputs,
+    #                        combine_resting_scans=args.combine_resting_scans,
+    #                        output_dir=args.output_dir,
+    #                        statistic=args.statistic),
+    # sorted(combined_bolds_list))
+    run_CORTADO(bold=combined_bolds_list[0],ICAstring=ICAstring, 
+                       preprocessing_type=args.preprocessing_type,
+                       smoothing=args.smoothing,
+                       parcel_file=args.parcellation_file,
+                       parcel_name=args.parcellation_name,
+                       seed_ROI_name=args.seed_ROI_name,
+                       seed_handling=args.seed_handling,
+                       seed_analysis_output=args.seed_analysis_output,
+                       text_output_format=args.text_output_format,
+                       selected_reg_name=args.reg_name,
+                       motion_confounds=args.motion_confounds,
+                       ICAoutputs=ICAoutputs,
+                       combine_resting_scans=args.combine_resting_scans,
+                       output_dir=args.output_dir,
+                       statistic=args.statistic)
     
