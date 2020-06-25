@@ -11,6 +11,7 @@ import subprocess
 from subprocess import Popen, PIPE
 from nilearn.connectome import ConnectivityMeasure
 from sklearn.covariance import GraphicalLassoCV
+from sklearn.covariance import EmpiricalCovariance
 import pdb
 
 class seed_analysis:
@@ -89,15 +90,15 @@ class seed_analysis:
         cifti_prefix = cifti_file_basename.split(".")[0]
         cifti_suffix = '.'.join(cifti_file_basename.split(".")[1:])
         if cifti_suffix == 'dtseries.nii':
-            new_cifti_suffix = '.ptseries.nii'
+            self.new_cifti_suffix = '.ptseries.nii'
         elif cifti_suffix == 'dscalar.nii':
-            new_cifti_suffix = '.pscalar.nii'
+           self.new_cifti_suffix = '.pscalar.nii'
         os.system("/opt/workbench/bin_rh_linux64/wb_command -cifti-parcellate %s %s %s %s" 
                   % (self.cifti_file, 
                      self.parcel_file, 
                      "COLUMN", 
-                     os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + new_cifti_suffix))
-        parcellated_cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + new_cifti_suffix
+                     os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + self.new_cifti_suffix))
+        parcellated_cifti_file = os.path.join(self.output_dir,cifti_prefix) + "_"+self.parcel_name + self.new_cifti_suffix
         self.parcellated_cifti_file = parcellated_cifti_file
         # does CIFTI file exist?
         try:
@@ -277,6 +278,7 @@ class pair_pair_connectivity(seed_analysis):
         # execute super class seed_analysis
         super().__init__(output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_fmritcs,confound,smoothing,regname,fmriname,fmrifoldername,seed_analysis_output)
         self.method = method
+        
         if self.level == 1:
             if self.seed_analysis_output == 'parcellated':
                 # generate pandas df from parcellated time series if parcel file is not none
@@ -284,6 +286,34 @@ class pair_pair_connectivity(seed_analysis):
                 self.df_cifti_load.columns = self.parcel_labels
             else:
                 self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
+            # run extract_vector
+            if len(self.seed_ROI_name) == 1:
+                self.extract_vector()
+            else:
+                self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
+                self.seed_ROI_name='avg'
+                self.parcel_labels=self.df_cifti_load.columns.to_list()
+                self.extract_vector()
+        else:
+            if self.seed_analysis_output == 'parcellated':
+                # generate pandas df from parcellated time series if parcel file is not none
+                self.cifti_file = self.fmriname[0]
+                self.cifti_tests()
+                fmritcs_1_np_array = self.parcellated_cifti_load.get_fdata()
+                self.cifti_file = self.fmriname[1]
+                self.cifti_tests()
+                fmritcs_2_np_array = self.parcellated_cifti_load.get_fdata()
+            else:
+                self.cifti_file = self.fmriname[0]
+                self.cifti_tests()
+                fmritcs_1_np_array = self.cifti_load.get_fdata()
+                self.cifti_file = self.fmriname[1]
+                self.cifti_tests()
+                fmritcs_2_np_array = self.cifti_load.get_fdata()
+            self.df_cifti_load = (((fmritcs_1_np_array- fmritcs_1_np_array.mean())/fmritcs_1_np_array.std())+((fmritcs_2_np_array- fmritcs_2_np_array.mean())/fmritcs_2_np_array.std()))/2
+            if self.seed_analysis_output == 'parcellated':
+                self.df_cifti_load.columns = self.parcel_labels
+            
             # run extract_vector
             if len(self.seed_ROI_name) == 1:
                 self.extract_vector()
@@ -300,7 +330,9 @@ class pair_pair_connectivity(seed_analysis):
             cifti_np_array = self.df_cifti_load.to_numpy()
             if self.method == 'correlation':
                 #Pearson correlation coefficients with LedoitWolf covariance estimator
-                measure = ConnectivityMeasure(kind='correlation')
+                #measure = ConnectivityMeasure(kind='correlation',cov_estimator='LedoitWolf')
+                #Pearson correlation coefficients based oemperical covariance (i.e. standard)
+                measure = ConnectivityMeasure(kind='correlation',cov_estimator=EmpiricalCovariance())
             elif self.method == 'covariance':
                 #LedoitWolf estimator
                 measure = ConnectivityMeasure(kind='covariance')
@@ -333,7 +365,6 @@ class pair_pair_connectivity(seed_analysis):
             #save new images
             new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.parcellated_cifti_load.header)
             new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.parcellated_cifti_load.header)
-            pdb.set_trace()
             new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname+'_'+self.parcel_name+self.ICAstring+'_level1_seed' + self.seed_ROI_string+'.feat','ParcellatedStats')
             if not os.path.isdir(new_cifti_output_folder):
                 os.makedirs(new_cifti_output_folder)
