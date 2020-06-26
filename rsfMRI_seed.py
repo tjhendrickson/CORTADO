@@ -278,38 +278,16 @@ class pair_pair_connectivity(seed_analysis):
         # execute super class seed_analysis
         super().__init__(output_dir,cifti_file, parcel_file, parcel_name, seed_ROI_name,level,pipeline,ICAstring,vol_fmritcs,confound,smoothing,regname,fmriname,fmrifoldername,seed_analysis_output)
         self.method = method
-        
         if self.level == 1:
-            if self.seed_analysis_output == 'parcellated':
-                
-                # generate pandas df from parcellated time series if parcel file is not none
-                self.df_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
-                self.df_cifti_load.columns = self.parcel_labels
-                
-                # run extract_vector
-                if len(self.seed_ROI_name) > 1:
-                    self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
-                    self.seed_ROI_name='avg'
-                    self.parcel_labels=self.df_cifti_load.columns.to_list()
-                self.extract_vector()
-            else:
-                self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
-            
-                
-            else:
-                if self.seed_analysis_output == 'parcellated':
-                
-                else:
-                    
-                self.extract_vector()
+            self.extract_vector()
         else:
             #initialize empty numpy array
             self.cifti_file = self.fmriname[0]
             self.cifti_tests()
             if self.seed_analysis_output == 'parcellated':
-                fmri_data_np_arr = np.zeros((self.parcellated_cifti_load.shape[0],self.parcellated_cifti_load.shape[1],len(self.fmriname)))
+                self.fmri_data_np_arr = np.zeros((self.parcellated_cifti_load.shape[0],self.parcellated_cifti_load.shape[1],len(self.fmriname)))
             else:
-                fmri_data_np_arr = np.zeros((self.cifti_load.shape[0],self.cifti_load.shape[1],len(self.fmriname)))
+                self.fmri_data_np_arr = np.zeros((self.cifti_load.shape[0],self.cifti_load.shape[1],len(self.fmriname)))
             #append normalized data to array and average
             for idx, fmri in enumerate(self.fmriname):
                 self.cifti_file = fmri
@@ -318,71 +296,86 @@ class pair_pair_connectivity(seed_analysis):
                     normalized_data = ((self.parcellated_cifti_load.get_fdata() - self.parcellated_cifti_load.get_fdata().mean())/self.parcellated_cifti_load.get_fdata().std())
                 else:
                     normalized_data = ((self.cifti_load.get_fdata() - self.cifti_load.get_fdata().mean())/self.cifti_load.get_fdata().std())
-                fmri_data_np_arr[:,:,idx] = normalized_data
-            self.df_cifti_load = pd.DataFrame(fmri_data_np_arr.mean(axis=2))
-            if self.seed_analysis_output == 'parcellated':
-                self.df_cifti_load.columns = self.parcel_labels
-            # run extract_vector
-            if self.seed_analysis_output == 'parcellated':
-                if len(self.seed_ROI_name) == 1:
-                    self.extract_vector()
-                else:
-                    self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
-                    self.seed_ROI_name='avg'
-                    self.parcel_labels=self.df_cifti_load.columns.to_list()
-                    self.extract_vector()
+                self.fmri_data_np_arr[:,:,idx] = normalized_data
+           
+            self.extract_vector()
         # run cifti_create_file
         self.create_cifti_file()
                     
     def extract_vector(self):
-        if self.level == 1:
-            cifti_np_array = self.df_cifti_load.to_numpy()
-            if self.method == 'correlation':
-                #Pearson correlation coefficients with LedoitWolf covariance estimator
-                #measure = ConnectivityMeasure(kind='correlation',cov_estimator='LedoitWolf')
-                #Pearson correlation coefficients based oemperical covariance (i.e. standard)
-                measure = ConnectivityMeasure(kind='correlation',cov_estimator=EmpiricalCovariance())
-            elif self.method == 'covariance':
-                #LedoitWolf estimator
-                measure = ConnectivityMeasure(kind='covariance')
-            elif self.method == 'partial_correlation':
-                # Partial correlation with LedoitWolf covariance estimator
-                measure = ConnectivityMeasure(kind='partial correlation')
-            elif self.method == 'precision':
-                measure = ConnectivityMeasure(kind='precision')
-            elif 'sparse' in self.method:
-                measure = GraphicalLassoCV() 
-            if 'sparse' in self.method:
-                measure.fit(cifti_np_array)
-                if 'covariance' in self.method:
-                    network_matrix = measure.covariance_
-                elif 'precision' in self.method:
-                    network_matrix = measure.precision_
+        if self.level==2:
+            self.df_cifti_load = pd.DataFrame(self.fmri_data_np_arr.mean(axis=2))
+        if type(self.seed_ROI_name) == list and len(self.seed_ROI_name) > 1:
+            if self.seed_analysis_output == 'parcellated':    
+                self.df_cifti_load.columns = self.parcel_labels
+                self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
+                self.parcel_labels=self.df_cifti_load.columns.to_list()
             else:
-                network_matrix = measure.fit_transform([cifti_np_array])[0]
-            df_network_matrix = pd.DataFrame(network_matrix)
-            df_network_matrix.columns = self.parcel_labels
-            self.r_functional_vector = df_network_matrix[self.seed_ROI_string].to_numpy()
-            self.z_functional_vector = np.arctanh(self.r_functional_vector)
+                self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
+                df_parcellated_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
+                df_parcellated_cifti_load.columns = self.parcel_labels
+                self.df_cifti_load['avg'] = df_parcellated_cifti_load[self.seed_ROI_name].mean(axis=1)
+            self.seed_ROI_name='avg'
+        else:
+            if self.seed_analysis_output == 'dense':
+                self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
+                df_parcellated_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
+                df_parcellated_cifti_load.columns = self.parcel_labels
+                self.df_cifti_load[self.seed_ROI_name] = df_parcellated_cifti_load[self.seed_ROI_name]
+        cifti_np_array = self.df_cifti_load.to_numpy()
+        if self.method == 'correlation':
+            #Pearson correlation coefficients with LedoitWolf covariance estimator
+            #measure = ConnectivityMeasure(kind='correlation',cov_estimator='LedoitWolf')
+            #Pearson correlation coefficients based oemperical covariance (i.e. standard)
+            measure = ConnectivityMeasure(kind='correlation',cov_estimator=EmpiricalCovariance())
+        elif self.method == 'covariance':
+            #LedoitWolf estimator
+            measure = ConnectivityMeasure(kind='covariance')
+        elif self.method == 'partial_correlation':
+            # Partial correlation with LedoitWolf covariance estimator
+            measure = ConnectivityMeasure(kind='partial correlation')
+        elif self.method == 'precision':
+            measure = ConnectivityMeasure(kind='precision')
+        elif 'sparse' in self.method:
+            measure = GraphicalLassoCV() 
+        if 'sparse' in self.method:
+            measure.fit(cifti_np_array)
+            if 'covariance' in self.method:
+                network_matrix = measure.covariance_
+            elif 'precision' in self.method:
+                network_matrix = measure.precision_
+        else:
+            network_matrix = measure.fit_transform([cifti_np_array])[0]
+        df_network_matrix = pd.DataFrame(network_matrix)
+        df_network_matrix.columns = self.parcel_labels
+        if self.seed_ROI_name=='avg':
+            # take everything except last element, i.e. avg. Need to do this because downstream this object must match grayordinate_file
+            self.r_functional_vector = df_network_matrix[self.seed_ROI_name][:-1].to_numpy()
+        else:
+            self.r_functional_vector = np.squeeze(df_network_matrix[self.seed_ROI_name].to_numpy())
+        self.z_functional_vector = np.arctanh(self.r_functional_vector)
             
     def create_cifti_file(self):
-        if self.level == 1:
-            # parcellate 91282 grayordinate dscalar file and parcellate. Use header information for newly created zstat and rstat pscalars
-            grayordinate_file = '/ones.dscalar.nii'
-            self.cifti_file = grayordinate_file
-            self.cifti_tests()
-            #save new images
+        # parcellate 91282 grayordinate dscalar file and parcellate. Use header information for newly created zstat and rstat pscalars
+        grayordinate_file = '/ones.dscalar.nii'
+        self.cifti_file = grayordinate_file
+        self.cifti_tests()
+        #save new images
+        if self.seed_analysis_output == 'parcellated':
+            output_format_folder = 'ParcellatedStats'
             new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.parcellated_cifti_load.header)
             new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.parcellated_cifti_load.header)
-            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname+'_'+self.parcel_name+self.ICAstring+'_level1_seed' + self.seed_ROI_string+'.feat','ParcellatedStats')
-            if not os.path.isdir(new_cifti_output_folder):
-                os.makedirs(new_cifti_output_folder)
-            nibabel.cifti2.save(new_r_cifti_img,os.path.join(new_cifti_output_folder,'rstats.pscalar.nii'))
-            nibabel.cifti2.save(new_z_cifti_img,os.path.join(new_cifti_output_folder,'zstats.pscalar.nii'))
+            cifti_file_suffix = '.pscalar.nii'
         else:
-            new_cifti_output_folder=os.path.join(self.output_dir,self.fmriname+'_'+self.parcel_name+self.ICAstring+'_level2_seed' + self.seed_ROI_string+'.feat','ParcellatedStats')
-            if not os.path.isdir(new_cifti_output_folder):
-                os.makedirs(new_cifti_output_folder)
+            output_format_folder = 'GrayordinatesStat'
+            new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.cifti_load.header)
+            new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.cifti_load.header)
+            cifti_file_suffix = '.dscalar.nii'
+        new_cifti_output_folder=os.path.join(self.output_dir,self.fmrifoldername+'_'+self.parcel_name+self.ICAstring+'_level'+str(self.level) + '_seed' + self.seed_ROI_string,output_format_folder)
+        if not os.path.isdir(new_cifti_output_folder):
+            os.makedirs(new_cifti_output_folder)
+        nibabel.cifti2.save(new_r_cifti_img,os.path.join(new_cifti_output_folder,'rstats' + cifti_file_suffix))
+        nibabel.cifti2.save(new_z_cifti_img,os.path.join(new_cifti_output_folder,'zstats' + cifti_file_suffix))
             
 class create_text_output(seed_analysis):
     def create_text_output(self,text_output_dir):
@@ -396,7 +389,6 @@ class create_text_output(seed_analysis):
         print('\t-The fmri file name: %s' %str(self.fmriname))
         print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(self.ICAstring))
         print('\t-Analysis level to output data from: %s' %str(self.level))
-        
         # if file exists and subject and session have yet to be added, add to file
         if self.level == 1:
             output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")

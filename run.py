@@ -176,7 +176,8 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
     if combine_resting_scans == 'Yes' or combine_resting_scans == 'yes':
         fmrinames = []
         for fmritcs in bold:
-            first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
+            if statistic == 'regression':
+                first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
                 seed_ROI_name=seed_ROI_name,
                 seed_handling=seed_handling,
                 ICAstring=ICAstring,
@@ -191,7 +192,6 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                 parcel_file=parcel_file,
                 parcel_name=parcel_name,
                 selected_reg_name=selected_reg_name)
-            if statistic == 'regression':
                 fmriname = os.path.basename(fmritcs).split(".")[0] 
             else:
                 fmriname = fmritcs
@@ -294,7 +294,6 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                seed_analysis_output=seed_analysis_output)
                 run_regression.setup()
             else:
-                pdb.set_trace()
                 pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed_ROI_name,
