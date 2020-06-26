@@ -281,47 +281,56 @@ class pair_pair_connectivity(seed_analysis):
         
         if self.level == 1:
             if self.seed_analysis_output == 'parcellated':
+                
                 # generate pandas df from parcellated time series if parcel file is not none
                 self.df_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
                 self.df_cifti_load.columns = self.parcel_labels
+                
+                # run extract_vector
+                if len(self.seed_ROI_name) > 1:
+                    self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
+                    self.seed_ROI_name='avg'
+                    self.parcel_labels=self.df_cifti_load.columns.to_list()
+                self.extract_vector()
             else:
                 self.df_cifti_load = pd.DataFrame(self.cifti_load.get_fdata())
-            # run extract_vector
-            if len(self.seed_ROI_name) == 1:
-                self.extract_vector()
+            
+                
             else:
-                self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
-                self.seed_ROI_name='avg'
-                self.parcel_labels=self.df_cifti_load.columns.to_list()
+                if self.seed_analysis_output == 'parcellated':
+                
+                else:
+                    
                 self.extract_vector()
         else:
+            #initialize empty numpy array
+            self.cifti_file = self.fmriname[0]
+            self.cifti_tests()
             if self.seed_analysis_output == 'parcellated':
-                # generate pandas df from parcellated time series if parcel file is not none
-                self.cifti_file = self.fmriname[0]
-                self.cifti_tests()
-                fmritcs_1_np_array = self.parcellated_cifti_load.get_fdata()
-                self.cifti_file = self.fmriname[1]
-                self.cifti_tests()
-                fmritcs_2_np_array = self.parcellated_cifti_load.get_fdata()
+                fmri_data_np_arr = np.zeros((self.parcellated_cifti_load.shape[0],self.parcellated_cifti_load.shape[1],len(self.fmriname)))
             else:
-                self.cifti_file = self.fmriname[0]
+                fmri_data_np_arr = np.zeros((self.cifti_load.shape[0],self.cifti_load.shape[1],len(self.fmriname)))
+            #append normalized data to array and average
+            for idx, fmri in enumerate(self.fmriname):
+                self.cifti_file = fmri
                 self.cifti_tests()
-                fmritcs_1_np_array = self.cifti_load.get_fdata()
-                self.cifti_file = self.fmriname[1]
-                self.cifti_tests()
-                fmritcs_2_np_array = self.cifti_load.get_fdata()
-            self.df_cifti_load = (((fmritcs_1_np_array- fmritcs_1_np_array.mean())/fmritcs_1_np_array.std())+((fmritcs_2_np_array- fmritcs_2_np_array.mean())/fmritcs_2_np_array.std()))/2
+                if self.seed_analysis_output == 'parcellated':
+                    normalized_data = ((self.parcellated_cifti_load.get_fdata() - self.parcellated_cifti_load.get_fdata().mean())/self.parcellated_cifti_load.get_fdata().std())
+                else:
+                    normalized_data = ((self.cifti_load.get_fdata() - self.cifti_load.get_fdata().mean())/self.cifti_load.get_fdata().std())
+                fmri_data_np_arr[:,:,idx] = normalized_data
+            self.df_cifti_load = pd.DataFrame(fmri_data_np_arr.mean(axis=2))
             if self.seed_analysis_output == 'parcellated':
                 self.df_cifti_load.columns = self.parcel_labels
-            
             # run extract_vector
-            if len(self.seed_ROI_name) == 1:
-                self.extract_vector()
-            else:
-                self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
-                self.seed_ROI_name='avg'
-                self.parcel_labels=self.df_cifti_load.columns.to_list()
-                self.extract_vector()
+            if self.seed_analysis_output == 'parcellated':
+                if len(self.seed_ROI_name) == 1:
+                    self.extract_vector()
+                else:
+                    self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
+                    self.seed_ROI_name='avg'
+                    self.parcel_labels=self.df_cifti_load.columns.to_list()
+                    self.extract_vector()
         # run cifti_create_file
         self.create_cifti_file()
                     
