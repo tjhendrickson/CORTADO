@@ -58,8 +58,15 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmrifoldername=shortfmriname,
                        seed_analysis_output=seed_analysis_output)
                 run_regression.setup()
+                if preprocessing_type == 'HCP':
+                    if level == 1 and seed_analysis_output == 'parcellated':
+                        if not text_output_format == 'none' or not text_output_format == 'NONE':
+                            l.acquire()
+                            run_regression.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                            l.release()
+                            time.sleep(1)
             else:
-                pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
+                run_pair_pair_connectivity = pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
                        seed_ROI_name=seed_ROI_name,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
@@ -70,13 +77,13 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmrifoldername=shortfmriname,
                        seed_analysis_output=seed_analysis_output,
                        method=statistic)
-            if preprocessing_type == 'HCP':
-                if level == 1 and seed_analysis_output == 'parcellated':
-                    if text_output_format == 'csv' or text_output_format == 'CSV':
-                        l.acquire()
-                        #SeedIO_init.create_text_output(ICAstring=ICAstring,level=level) #TODO need to reformat this
-                        l.release()
-                        time.sleep(1)
+                if preprocessing_type == 'HCP':
+                    if level == 1 and seed_analysis_output == 'parcellated':
+                        if not text_output_format == 'none' or not text_output_format == 'NONE':
+                            l.acquire()
+                            run_pair_pair_connectivity.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                            l.release()
+                            time.sleep(1)
         else:
             for seed in seed_ROI_name:
                 if statistic == 'regression':
@@ -90,8 +97,15 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmrifoldername=shortfmriname,
                        seed_analysis_output=seed_analysis_output)
                     run_regression.setup()
+                    if preprocessing_type == 'HCP':
+                        if level == 1 and seed_analysis_output == 'parcellated':
+                            if not text_output_format == 'none' or not text_output_format == 'NONE':
+                                l.acquire()
+                                run_regression.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                                l.release()
+                                time.sleep(1)
                 else:
-                    pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
+                    run_pair_pair_connectivity = pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
                                            parcel_file=parcel_file,parcel_name=parcel_name,
                                            seed_ROI_name=seed,level=1,
                                            pipeline=preprocessing_type,ICAstring=ICAstring,
@@ -102,13 +116,13 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                                            fmrifoldername=shortfmriname,
                                            seed_analysis_output=seed_analysis_output,
                                            method=statistic)
-                if preprocessing_type == 'HCP':
-                    if level == 1 and seed_analysis_output == 'parcellated':
-                        if text_output_format == 'csv' or text_output_format == 'CSV':
-                            l.acquire()
-                            #SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=output_dir,level=level) #TODO need to reformat this
-                            l.release()
-                            time.sleep(1)
+                    if preprocessing_type == 'HCP':
+                        if level == 1 and seed_analysis_output == 'parcellated':
+                            if not text_output_format == 'none' or not text_output_format == 'NONE':
+                                l.acquire()
+                                run_pair_pair_connectivity.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                                l.release()
+                                time.sleep(1)
     elif len(seed_ROI_name) == 1:
         if statistic == 'regression':
             run_regression = regression(output_dir=output_dir,cifti_file=fmritcs,
@@ -121,8 +135,15 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmrifoldername=shortfmriname,
                        seed_analysis_output=seed_analysis_output)
             run_regression.setup()
+            if preprocessing_type == 'HCP':
+                if level == 1 and seed_analysis_output == 'parcellated':
+                    if not text_output_format == 'none' or not text_output_format == 'NONE':
+                        l.acquire()
+                        run_regression.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                        l.release()
+                        time.sleep(1)
         else:
-            pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
+            run_pair_pair_connectivity = pair_pair_connectivity(output_dir=output_dir,cifti_file=fmritcs,
                        parcel_file=parcel_file,parcel_name=parcel_name,
                        seed_ROI_name=seed_ROI_name,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
@@ -133,19 +154,19 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        fmrifoldername=shortfmriname,
                        seed_analysis_output=seed_analysis_output,
                        method=statistic)
-        if preprocessing_type == 'HCP':
-            if level == 1 and seed_analysis_output == 'parcellated':
-                if text_output_format == 'csv' or text_output_format == 'CSV':
-                    l.acquire()
-                    #SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=output_dir,level=level) #TODO need to reformat this
-                    l.release()
-                    time.sleep(1)
-
+            if preprocessing_type == 'HCP':
+                    if level == 1 and seed_analysis_output == 'parcellated':
+                        if not text_output_format == 'none' or not text_output_format == 'NONE':
+                            l.acquire()
+                            run_pair_pair_connectivity.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                            l.release()
+                            time.sleep(1)
 def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                parcel_name, seed_ROI_name, seed_handling,
                                seed_analysis_output, text_output_format,
                                selected_reg_name, motion_confounds, ICAoutputs,
                                combine_resting_scans,output_dir,statistic):
+    pdb.set_trace()
     if combine_resting_scans == 'Yes' or combine_resting_scans == 'yes':
         fmritcs = bold[0]
         level = 2
@@ -214,8 +235,15 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifoldername='rsfMRI_combined',
                                seed_analysis_output=seed_analysis_output)
                         run_regression.setup()
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if not text_output_format == 'none' or not text_output_format == 'NONE':
+                                    l.acquire()
+                                    run_regression.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                                    l.release()
+                                    time.sleep(1)
                     else:
-                        pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
+                        run_pair_pair_connectivity = pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed_ROI_name,
                                level=level,
@@ -229,14 +257,13 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifoldername='rsfMRI_combined',
                                seed_analysis_output=seed_analysis_output,
                                method=statistic)
-                        
-                    if preprocessing_type == 'HCP':
-                        if seed_analysis_output == 'parcellated':
-                            if text_output_format == 'csv' or text_output_format == 'CSV':
-                                l.acquire()
-                                #SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2) # TODO like others, needs to be reorganized
-                                l.release()
-                                time.sleep(1)
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if not text_output_format == 'none' or not text_output_format == 'NONE':
+                                    l.acquire()
+                                    run_pair_pair_connectivity.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                                    l.release()
+                                    time.sleep(1)                        
             else:
                 for seed in seed_ROI_name:
                     if statistic == 'regression':
@@ -254,8 +281,15 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifoldername='rsfMRI_combined',
                                seed_analysis_output=seed_analysis_output)
                         run_regression.setup()
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if not text_output_format == 'none' or not text_output_format == 'NONE':
+                                    l.acquire()
+                                    run_regression.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                                    l.release()
+                                    time.sleep(1)
                     else:
-                        pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
+                        run_pair_pair_connectivity = pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed,
                                level=level,
@@ -269,14 +303,13 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifoldername='rsfMRI_combined',
                                seed_analysis_output=seed_analysis_output,
                                method=statistic)
-                    
-                    if preprocessing_type == 'HCP':
-                        if seed_analysis_output == 'parcellated':
-                            if text_output_format == 'csv' or text_output_format == 'CSV':
-                                l.acquire()
-                                #SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2) # TODO like others, needs to be reorganized
-                                l.release()
-                                time.sleep(1)
+                        if preprocessing_type == 'HCP':
+                            if seed_analysis_output == 'parcellated':
+                                if not text_output_format == 'none' or not text_output_format == 'NONE':
+                                    l.acquire()
+                                    run_pair_pair_connectivity.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                                    l.release()
+                                    time.sleep(1)
         elif len(seed_ROI_name) == 1:
             if statistic == 'regression':
                 run_regression = regression(output_dir=output_dir,cifti_file='', 
@@ -293,8 +326,15 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifoldername='rsfMRI_combined',
                                seed_analysis_output=seed_analysis_output)
                 run_regression.setup()
+                if preprocessing_type == 'HCP':
+                    if seed_analysis_output == 'parcellated':
+                        if not text_output_format == 'none' or not text_output_format == 'NONE':
+                            l.acquire()
+                            run_regression.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                            l.release()
+                            time.sleep(1)
             else:
-                pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
+                run_pair_pair_connectivity = pair_pair_connectivity(output_dir=output_dir,cifti_file='', 
                                parcel_file=parcel_file, parcel_name=parcel_name, 
                                seed_ROI_name=seed_ROI_name,
                                level=level,
@@ -308,14 +348,13 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                fmrifoldername='rsfMRI_combined',
                                seed_analysis_output=seed_analysis_output,
                                method=statistic)
-            
-            if preprocessing_type == 'HCP':
-                if seed_analysis_output == 'parcellated':
-                    if text_output_format == 'csv' or text_output_format == 'CSV':
-                        l.acquire()
-                        #SeedIO_init.create_text_output(ICAstring=ICAstring,text_output_dir=args.output_dir,level=2) #TODO
-                        l.release()
-                        time.sleep(1)
+                if preprocessing_type == 'HCP':
+                    if seed_analysis_output == 'parcellated':
+                        if not text_output_format == 'none' or not text_output_format == 'NONE':
+                            l.acquire()
+                            run_pair_pair_connectivity.create_text_output(text_output_dir=args.output_dir,text_output_format=text_output_format)
+                            l.release()
+                            time.sleep(1)
     else:
         first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
                                             seed_ROI_name=seed_ROI_name,
@@ -336,6 +375,18 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--input_dir', help='The directory where the preprocessed derivative needed live',required=True)
 parser.add_argument('--output_dir', help='The directory where the output files should be stored.',required=True)
+parser.add_argument('--group', help='Whether to run this participant by participant or the entire group. Choices are "participant" or "batch". If participant by participant "--participant_label" and "--session_label" must be specified',choices = ['participant','batch'],required=True)
+parser.add_argument('--participant_label', help='The label of the participant that should be analyzed. The label '
+                   'corresponds to sub-<participant_label> from the BIDS spec '
+                   '(so it does not include "sub-"). If this parameter is not '
+                   'provided all subjects should be analyzed. Multiple '
+                   'participants can be specified with a space separated list.',
+                   nargs="+")
+parser.add_argument('--session_label', help='The label of the session that should be analyzed. The label '
+                   'corresponds to ses-<session_label> from the BIDS spec '
+                   '(so it does not include "ses-"). If this parameter is not '
+                   'provided all sessions within a subject should be analyzed.',
+                   nargs="+")
 parser.add_argument('--preprocessing_type', help='BIDS-apps preprocessing pipeline run on data. Choices include "HCP" and "fmriprep". ',choices=['HCP','fmriprep'],default='HCP')
 parser.add_argument('--use_ICA_outputs',help='Use ICA (whether FIX or AROMA) outputs in seed analysis. Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='Yes')
 parser.add_argument('--combine_resting_scans',help='If multiple of the same resting state BIDS file type exist should they be combined prior seed analysis? Choices include "Y/yes" or "N/no".',choices=['Yes','yes','No','no'],default='No')
@@ -360,11 +411,11 @@ parser.add_argument('--num_cpus', help='How many concurrent CPUs to use',default
 parser.add_argument('--statistic', help='Strategy to calculate functional connectivity. ' 
                     'Choices are "correlation", and "regression"', 
                     choices=['correlation','partial_correlation','regression','tangent', 'covariance', 'sparse_inverse_covariance', 'precision', 'sparse_inverse_precision'],default='correlation')
-
-
 # global variables
 args = parser.parse_args()
 msm_all_reg_name = "MSMAll_2_d40_WRN"
+if args.text_output_format == 'CSV' or args.text_output_format == 'csv':
+    args.text_output_format = 'csv'
 
 if args.preprocessing_type == 'HCP':
     if not args.motion_confounds == 'NONE':

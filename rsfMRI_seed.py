@@ -251,6 +251,73 @@ class regression(seed_analysis):
         print('\t-Regressor file: %s' %regressor_file_path)
         print('\n') 
         return regressor_file_path
+    
+    def create_text_output(self,text_output_format,text_output_dir):
+        # find first level CORTADO folder for given participant and session
+        print('rsfMRI_seed.py: Create Text Output ')
+        print('\t-Text output folder: %s' %str(text_output_dir))
+        print('\t-Cifti file: %s' %str(self.cifti_file))
+        print('\t-Parcel file: %s' %str(self.parcel_file))
+        print('\t-Parcel name: %s' %str(self.parcel_name))
+        print('\t-Seed ROI name/s: %s' %str(self.seed_ROI_name))
+        print('\t-The fmri file name: %s' %str(self.fmriname))
+        print('\t-ICA String to be used to find FEAT dir, if any: %s' %str(self.ICAstring))
+        print('\t-Analysis level to output data from: %s' %str(self.level))
+        # if file exists and subject and session have yet to be added, add to file
+        if self.level == 1:
+            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")
+        elif self.level == 2:
+            output_text_file = os.path.join(text_output_dir,"rsfMRI_combined_"+self.fmriname.split('_bold_')[1] + self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")
+        print('\t-Output file: %s' %str(output_text_file))
+        print('\n')
+        if self.level == 1:
+            CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+self.ICAstring+'_level' + str(self.level)+'_seed'+self.seed_ROI_string+".feat")
+            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
+        elif self.level == 2:
+            CORTADO_dir = glob(os.path.join(self.output_dir,"rsfMRI_combined*" +self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".feat"))[0]
+            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats_fixedEffects","zstat1.ptseries.nii")
+        zstat_data_img = nibabel.cifti2.load(zstat_data_file)
+        # if file does not exist write header to it, otherwise continue
+        try:
+            read_output_text_file = open(output_text_file,'r')
+            read_output_text_file.close()
+        except:
+            # file exists and is accessible, ensure that to be appended data does not yet exist on it
+            fieldnames = self.parcel_labels
+            # append subject and session ID to fieldname list
+            if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+                fieldnames.insert(0,'Session ID')
+                fieldnames.insert(0,'Subject ID')
+            # if doesn't exist create headers and add subject/session data to file
+            with open(output_text_file,'w') as output_text_file_open:
+                writer = csv.writer(output_text_file_open)
+                writer.writerow(fieldnames)
+        # find participant if it exists
+        row_data = np.squeeze(zstat_data_img.get_fdata()).tolist()
+        if os.path.basename(self.output_dir).split('-')[0] == 'ses':
+            session_id = str(os.path.basename(self.output_dir).split('-')[1])
+            row_data.insert(0,session_id)
+            subject_id = str(self.output_dir.split('sub-')[1].split('/')[0])    
+            row_data.insert(0,subject_id)
+        else:
+            subject_id = str(os.path.basename(self.output_dir).split('-')[1])
+            row_data.insert(0,subject_id)
+        # create dataframe of output text file
+        output_text_file_df = pd.read_csv(output_text_file)
+        if session_id:
+            if len(output_text_file_df.loc[(output_text_file_df['Session ID']==session_id) & (output_text_file_df['Subject ID']==subject_id)]) == 0:
+                with open(output_text_file,'a') as append_output_text_file:
+                    writer = csv.writer(append_output_text_file)
+                    writer.writerow(row_data)
+            else:
+                print('WARNING: Session ID %s already exists within text output file %s. Not writing to file.' %(str(session_id),output_text_file))
+        else:
+            if len(output_text_file_df[output_text_file_df['Subject ID']==subject_id]) == 0:
+                with open(output_text_file,'a') as output_text_file:
+                    writer = csv.writer(append_output_text_file)
+                    writer.writerow(row_data)
+            else:
+                print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
             
     def run(self,command):
         merged_env = os.environ
@@ -376,9 +443,8 @@ class pair_pair_connectivity(seed_analysis):
             os.makedirs(new_cifti_output_folder)
         nibabel.cifti2.save(new_r_cifti_img,os.path.join(new_cifti_output_folder,'rstats' + cifti_file_suffix))
         nibabel.cifti2.save(new_z_cifti_img,os.path.join(new_cifti_output_folder,'zstats' + cifti_file_suffix))
-            
-class create_text_output(seed_analysis):
-    def create_text_output(self,text_output_dir):
+        
+    def create_text_output(self,text_output_format,text_output_dir):
         # find first level CORTADO folder for given participant and session
         print('rsfMRI_seed.py: Create Text Output ')
         print('\t-Text output folder: %s' %str(text_output_dir))
@@ -391,17 +457,17 @@ class create_text_output(seed_analysis):
         print('\t-Analysis level to output data from: %s' %str(self.level))
         # if file exists and subject and session have yet to be added, add to file
         if self.level == 1:
-            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")
+            output_text_file = os.path.join(text_output_dir,"_".join(self.fmriname.split('_')[2:])+"_"+self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+"."+text_output_format)
         elif self.level == 2:
-            output_text_file = os.path.join(text_output_dir,"rsfMRI_combined_"+self.fmriname.split('_bold_')[1] + self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+".csv")
+            output_text_file = os.path.join(text_output_dir,"rsfMRI_combined_"+ self.parcel_name+self.ICAstring+'_level'+ str(self.level)+'_seed'+self.seed_ROI_string+"."+text_output_format)
         print('\t-Output file: %s' %str(output_text_file))
         print('\n')
         if self.level == 1:
-            CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+self.ICAstring+'_level' + str(self.level)+'_seed'+self.seed_ROI_string+".feat")
-            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstat1.ptseries.nii")
+            CORTADO_dir = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+self.ICAstring+'_level' + str(self.level)+'_seed'+self.seed_ROI_string)
+            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstats.pscalar.nii")
         elif self.level == 2:
-            CORTADO_dir = glob(os.path.join(self.output_dir,"rsfMRI_combined_*.feat"))[0]
-            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats_fixedEffects","zstat1.ptseries.nii")
+            CORTADO_dir = glob(os.path.join(self.output_dir,"rsfMRI_combined_*"+self.parcel_name+self.ICAstring+'_level' + str(self.level)+'_seed'+self.seed_ROI_string))[0]
+            zstat_data_file = os.path.join(CORTADO_dir,"ParcellatedStats","zstats.pscalar.nii")
         zstat_data_img = nibabel.cifti2.load(zstat_data_file)
         # if file does not exist write header to it, otherwise continue
         try:
@@ -444,6 +510,7 @@ class create_text_output(seed_analysis):
                     writer.writerow(row_data)
             else:
                 print('WARNING: Subject ID %s already exists within text output file %s. Not writing to file.' %(str(subject_id),output_text_file))
+    
 
 
 
