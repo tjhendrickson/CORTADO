@@ -434,6 +434,13 @@ if args.preprocessing_type == 'HCP':
 elif args.preprocessing_type == 'fmriprep' and args.motion_confounds != 'NONE':
     pass
 
+if args.group == 'participant':
+    if args.participant_label or args.session_label:
+        pass
+    else:
+        print('\n')
+        raise ValueError('Selecting "--group participant" must also include either subject or session IDs through "--participant_label" or "--session label" respectively. Exiting.')
+
  # use ICA outputs
 if args.use_ICA_outputs == 'yes' or args.use_ICA_outputs == 'Yes':
     ICAoutputs = 'YES'
@@ -443,6 +450,7 @@ else:
 # check on arguments
 print("Running CORTADO ")
 layout = BIDSLayout(os.path.join(args.input_dir))
+
 if args.seed_ROI_name:
     print('\t-Seed ROI selected: %s' %str(args.seed_ROI_name))
 else:
@@ -462,6 +470,7 @@ print('\t-The preprocessing pipeline that the input comes from: %s' %str(args.pr
 print('\t-Use ICA outputs: %s' %str(ICAoutputs))
 print('\t-Use mixed effects if multiple of same acquisition: %s' %str(args.combine_resting_scans))
 print('\t-Text output format: %s' %str(args.text_output_format))
+print('\t-Whether to run this participant by participant or the entire group: %s' %(str(args.group)))
 print('\n')
 
 l = Lock()
@@ -472,16 +481,45 @@ if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
         if ICAoutputs == 'YES':
             ICAstring="_FIXclean"
             if args.reg_name == msm_all_reg_name:
-                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest') if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                if args.group == 'batch':
+                    bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest') if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                else:
+                    if args.participant_label:
+                        if args.session_label:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,session=args.session_label,type='clean',extensions="dtseries.nii",task='rest') if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                        else:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,type='clean',extensions="dtseries.nii",task='rest') if msm_all_reg_name+'_hp2000_clean' in f.filename]
             else:
-                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest') if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                if args.group == 'batch':
+                    bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest') if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                else:
+                    if args.participant_label:
+                        if args.session_label:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,session=args.session_label,type='clean',extensions="dtseries.nii", task='rest') if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                        else:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,type='clean',extensions="dtseries.nii", task='rest') if '_hp2000_clean' and not msm_all_reg_name in f.filename]
         # do not use ICA outputs
         else:
             ICAstring=""
             if args.reg_name == msm_all_reg_name:
-                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                if args.group == 'batch':
+                    bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                else:
+                    if args.participant_label:
+                        if args.session_label:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,session=args.session_label,extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                        else:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,extensions="dtseries.nii", task='rest') if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
             else:
-                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                if args.group == 'batch':
+                    bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                else:
+                    if args.participant_label:
+                        if args.session_label:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,session=args.session_label,extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                        else:
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                            
     elif args.preprocessing_type == 'fmriprep':
         #use ICA outputs
         if ICAoutputs == 'YES':
@@ -524,33 +562,63 @@ if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
         output_dir=args.output_dir,
         statistic=args.statistic)
 else:
-
     combined_bolds_list = []
     # if there are any sessions, parse data this way
-    if len(layout.get_sessions()) > 0:
-        for scanning_session in layout.get_sessions():
-            # retreive subject id that is associated with session id and parse data with subject and session id
-            for subject in layout.get_subjects(session=scanning_session):
+    if args.group == 'batch':
+        if len(layout.get_sessions()) > 0:
+            for scanning_session in layout.get_sessions():
+                # retreive subject id that is associated with session id and parse data with subject and session id
+                for subject in layout.get_subjects(session=scanning_session):
+                    if args.preprocessing_type == 'HCP':
+                        # use ICA outputs
+                        if ICAoutputs == 'YES':
+                            ICAstring="_FIXclean"
+                            if args.reg_name == msm_all_reg_name:
+                                if args.group == 'batch':
+                                    bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',subject=subject,session=scanning_session) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                            else:
+                                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=subject,session=scanning_session) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                        # do not use ICA outputs
+                        else:
+                            ICAstring=""
+                            if args.reg_name == msm_all_reg_name:
+                                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=subject,session=scanning_session) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                            else:
+                                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=subject,session=scanning_session) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                    elif args.preprocessing_type == 'fmriprep':
+                        #use ICA outputs
+                        if ICAoutputs == 'YES':
+                            ICAstring="_AROMAclean"
+                            bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=subject,session=scanning_session) if 'smoothAROMAnonaggr' in f.filename]
+                        # do not use ICA outputs
+                        else:
+                            ICAstring=""
+                            bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
+                        bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
+                    if len(bolds) == 2:
+                        combined_bolds_list.append(bolds)
+        else:
+            for scanning_session in layout.get_subjects():
                 if args.preprocessing_type == 'HCP':
                     # use ICA outputs
                     if ICAoutputs == 'YES':
                         ICAstring="_FIXclean"
                         if args.reg_name == msm_all_reg_name:
-                            bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',subject=subject,session=scanning_session) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                            bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',subject=scanning_session) if msm_all_reg_name+'_hp2000_clean' in f.filename]
                         else:
-                            bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=subject,session=scanning_session) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                            bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=scanning_session) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
                     # do not use ICA outputs
                     else:
                         ICAstring=""
                         if args.reg_name == msm_all_reg_name:
-                            bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=subject,session=scanning_session) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                            bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=scanning_session) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
                         else:
-                            bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=subject,session=scanning_session) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                            bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=scanning_session) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
                 elif args.preprocessing_type == 'fmriprep':
                     #use ICA outputs
                     if ICAoutputs == 'YES':
                         ICAstring="_AROMAclean"
-                        bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=subject,session=scanning_session) if 'smoothAROMAnonaggr' in f.filename]
+                        bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=scanning_session) if 'smoothAROMAnonaggr' in f.filename]
                     # do not use ICA outputs
                     else:
                         ICAstring=""
@@ -559,34 +627,67 @@ else:
                 if len(bolds) == 2:
                     combined_bolds_list.append(bolds)
     else:
-        for scanning_session in layout.get_subjects():
-            if args.preprocessing_type == 'HCP':
-                # use ICA outputs
-                if ICAoutputs == 'YES':
-                    ICAstring="_FIXclean"
-                    if args.reg_name == msm_all_reg_name:
-                        bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',subject=scanning_session) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+        if args.participant_label:
+            if args.session_label:
+                if args.preprocessing_type == 'HCP':
+                        # use ICA outputs
+                        if ICAoutputs == 'YES':
+                            ICAstring="_FIXclean"
+                            if args.reg_name == msm_all_reg_name:
+                                if args.group == 'batch':
+                                    bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',subject=args.participant_label,session=args.session_label) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                            else:
+                                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=args.participant_label,session=args.session_label) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                        # do not use ICA outputs
+                        else:
+                            ICAstring=""
+                            if args.reg_name == msm_all_reg_name:
+                                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=args.participant_label,session=args.session_label) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                            else:
+                                bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=args.participant_label,session=args.session_label) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                elif args.preprocessing_type == 'fmriprep':
+                    #use ICA outputs
+                    if ICAoutputs == 'YES':
+                        ICAstring="_AROMAclean"
+                        bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=args.participant_label,session=args.session_label) if 'smoothAROMAnonaggr' in f.filename]
+                    # do not use ICA outputs
                     else:
-                        bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=scanning_session) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
-                # do not use ICA outputs
-                else:
-                    ICAstring=""
-                    if args.reg_name == msm_all_reg_name:
-                        bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=scanning_session) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                        ICAstring=""
+                        bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
+                    bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
+                if len(bolds) == 2:
+                    combined_bolds_list.append(bolds)
+            else:
+                if args.preprocessing_type == 'HCP':
+                    # use ICA outputs
+                    if ICAoutputs == 'YES':
+                        ICAstring="_FIXclean"
+                        if args.reg_name == msm_all_reg_name:
+                            if args.group == 'batch':
+                                bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii",task='rest',subject=args.participant_label) if msm_all_reg_name+'_hp2000_clean' in f.filename]
+                        else:
+                            bolds = [f.filename for f in layout.get(type='clean',extensions="dtseries.nii", task='rest',subject=args.participant_label) if '_hp2000_clean' and not msm_all_reg_name in f.filename]
+                    # do not use ICA outputs
                     else:
-                        bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=scanning_session) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
-            elif args.preprocessing_type == 'fmriprep':
-                #use ICA outputs
-                if ICAoutputs == 'YES':
-                    ICAstring="_AROMAclean"
-                    bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=scanning_session) if 'smoothAROMAnonaggr' in f.filename]
-                # do not use ICA outputs
-                else:
-                    ICAstring=""
-                    bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
-                bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
-            if len(bolds) == 2:
-                combined_bolds_list.append(bolds)
+                        ICAstring=""
+                        if args.reg_name == msm_all_reg_name:
+                            bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=args.participant_label) if msm_all_reg_name + '_hp2000' in f.filename and not 'clean' in f.filename]
+                        else:
+                            bolds = [f.filename for f in layout.get(extensions="dtseries.nii", task='rest',subject=args.participant_label) if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
+                elif args.preprocessing_type == 'fmriprep':
+                    #use ICA outputs
+                    if ICAoutputs == 'YES':
+                        ICAstring="_AROMAclean"
+                        bolds = [f.filename for f in layout.get(type='bold',task='rest',subject=args.participant_label) if 'smoothAROMAnonaggr' in f.filename]
+                    # do not use ICA outputs
+                    else:
+                        ICAstring=""
+                        bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
+                    bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
+                if len(bolds) == 2:
+                    combined_bolds_list.append(bolds)
+                
+    
     # multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
     #                        preprocessing_type=args.preprocessing_type,
     #                        smoothing=args.smoothing,
