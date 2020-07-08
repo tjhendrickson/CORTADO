@@ -420,7 +420,7 @@ class pair_pair_connectivity(seed_analysis):
             self.r_functional_vector = df_network_matrix[self.seed_ROI_name][:-1].to_numpy()
         else:
             self.r_functional_vector = np.squeeze(df_network_matrix[self.seed_ROI_name].to_numpy())
-        self.z_functional_vector = np.arctanh(self.r_functional_vector)
+        self.z_functional_vector = 0.5*(np.log(1+self.r_functional_vector)-np.log(1-self.r_functional_vector))
             
     def create_cifti_file(self):
         # parcellate 91282 grayordinate dscalar file and parcellate. Use header information for newly created zstat and rstat pscalars

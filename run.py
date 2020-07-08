@@ -166,7 +166,6 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                seed_analysis_output, text_output_format,
                                selected_reg_name, motion_confounds, ICAoutputs,
                                combine_resting_scans,output_dir,statistic):
-    pdb.set_trace()
     if combine_resting_scans == 'Yes' or combine_resting_scans == 'yes':
         fmritcs = bold[0]
         level = 2
@@ -399,7 +398,7 @@ parser.add_argument('--seed_handling', help='Of the ROI/s you have provided do y
                                         choices=['together', 'separate'],
                                         default='separate')
 parser.add_argument('--seed_analysis_output',help='The output of the seed based analysis. Choices are "dense" (i.e. dtseries.nii) and "parcellated" (i.e. ptseries.nii)).',choices = ['dense','parcellated'], default = 'parcellated')
-parser.add_argument('--motion_confounds',help='What type of motion confounds to use, if any. Choices are "Movement_Regressors" (motion rotation angles and translations in mm), '
+parser.add_argument('--motion_confounds',help='What type of motion confounds to use, if any. Note only works in combination with "--statistic regression". Choices are "Movement_Regressors" (motion rotation angles and translations in mm), '
                                         ' "Movement_Regressors_dt" (detrended motion rotation angles and translations in mm), "Movement_Regressors_demean" (demeaned motion rotation angles and translations in mm) "Movement_RelativeRMS" (RMS intensity difference of volume N to the reference volume), '
                                         ' "Movement_RelativeRMS_mean" (square of RMS intensity difference of volume N to the reference volume), "Movement_AbsoluteRMS" (absolute RMS intensity difference of volume N to the reference volume, '
                                         ' "Movement_AbsoluteRMS_mean" (square of absolute RMS intensity difference of volume N to the reference volume), "dvars" ( RMS intensity difference of volume N to volume N+1 (see Power et al, NeuroImage, 59(3), 2012)), '
@@ -419,6 +418,9 @@ if args.text_output_format == 'CSV' or args.text_output_format == 'csv':
 
 if args.preprocessing_type == 'HCP':
     if not args.motion_confounds == 'NONE':
+        if args.statistic != 'regression':
+            print('\n')
+            raise ValueError('Selecting "--motion_confounds" without "--statistic regression" does not do anything. Either change argument "--motion_confounds" or "--statistic". Exiting.')
         motion_confounds_dict = {'Movement_Regressors': 'Movement_Regressors.txt',
         'Movement_Regressors_dt': 'Movement_Regressors_dt.txt',
         'Movement_Regressors_demean': 'Movement_Regressors_demean.txt',
@@ -433,7 +435,6 @@ if args.preprocessing_type == 'HCP':
         motion_confounds_filename = 'NONE'
 elif args.preprocessing_type == 'fmriprep' and args.motion_confounds != 'NONE':
     pass
-
 if args.group == 'participant':
     if args.participant_label or args.session_label:
         pass
@@ -518,8 +519,7 @@ if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
                         if args.session_label:
                             bolds = [f.filename for f in layout.get(subject=args.participant_label,session=args.session_label,extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
                         else:
-                            bolds = [f.filename for f in layout.get(subject=args.participant_label,extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]
-                            
+                            bolds = [f.filename for f in layout.get(subject=args.participant_label,extensions="dtseries.nii", task='rest') if '_hp2000' in f.filename and not 'clean' and not msm_all_reg_name in f.filename]              
     elif args.preprocessing_type == 'fmriprep':
         #use ICA outputs
         if ICAoutputs == 'YES':
@@ -530,37 +530,22 @@ if args.combine_resting_scans == 'No' or args.combine_resting_scans == 'no':
             ICAstring=""
             bolds = [f.filename for f in layout.get(type='bold',task='rest') if 'preproc' in f.filename]
         bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
-    # multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
-    #                            preprocessing_type=args.preprocessing_type,
-    #                            smoothing=args.smoothing,
-    #                            parcel_file=args.parcellation_file,
-    #                            parcel_name=args.parcellation_name,
-    #                            seed_ROI_name=args.seed_ROI_name,
-    #                            seed_handling=args.seed_handling,
-    #                            seed_analysis_output=args.seed_analysis_output,
-    #                            text_output_format=args.text_output_format,
-    #                            selected_reg_name=args.reg_name,
-    #                            motion_confounds=args.motion_confounds,
-    #                            ICAoutputs=ICAoutputs,
-    #                            combine_resting_scans=args.combine_resting_scans,
-    #                            output_dir=args.output_dir,
-    #                            statistic=args.statistic),
-    #             sorted(bolds))
-    run_CORTADO(bold=bolds[0],ICAstring=ICAstring, 
-        preprocessing_type=args.preprocessing_type,
-        smoothing=args.smoothing,
-        parcel_file=args.parcellation_file,
-        parcel_name=args.parcellation_name,
-        seed_ROI_name=args.seed_ROI_name,
-        seed_handling=args.seed_handling,
-        seed_analysis_output=args.seed_analysis_output,
-        text_output_format=args.text_output_format,
-        selected_reg_name=args.reg_name,
-        motion_confounds=args.motion_confounds,
-        ICAoutputs=ICAoutputs,
-        combine_resting_scans=args.combine_resting_scans,
-        output_dir=args.output_dir,
-        statistic=args.statistic)
+    multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
+                                preprocessing_type=args.preprocessing_type,
+                                smoothing=args.smoothing,
+                                parcel_file=args.parcellation_file,
+                                parcel_name=args.parcellation_name,
+                                seed_ROI_name=args.seed_ROI_name,
+                                seed_handling=args.seed_handling,
+                                seed_analysis_output=args.seed_analysis_output,
+                                text_output_format=args.text_output_format,
+                                selected_reg_name=args.reg_name,
+                                motion_confounds=args.motion_confounds,
+                                ICAoutputs=ICAoutputs,
+                                combine_resting_scans=args.combine_resting_scans,
+                                output_dir=args.output_dir,
+                                statistic=args.statistic),
+                sorted(bolds))
 else:
     combined_bolds_list = []
     # if there are any sessions, parse data this way
@@ -686,37 +671,19 @@ else:
                     bolds_ref = [f.filename for f in layout.get(type='boldref',task='rest')]
                 if len(bolds) == 2:
                     combined_bolds_list.append(bolds)
-                
-    
-    # multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
-    #                        preprocessing_type=args.preprocessing_type,
-    #                        smoothing=args.smoothing,
-    #                        parcel_file=args.parcellation_file,
-    #                        parcel_name=args.parcellation_name,
-    #                        seed_ROI_name=args.seed_ROI_name,
-    #                        seed_handling=args.seed_handling,
-    #                        seed_analysis_output=args.seed_analysis_output,
-    #                        text_output_format=args.text_output_format,
-    #                        selected_reg_name=args.reg_name,
-    #                        motion_confounds=args.motion_confounds,
-    #                        ICAoutputs=ICAoutputs,
-    #                        combine_resting_scans=args.combine_resting_scans,
-    #                        output_dir=args.output_dir,
-    #                        statistic=args.statistic),
-    # sorted(combined_bolds_list))
-    run_CORTADO(bold=combined_bolds_list[0],ICAstring=ICAstring, 
-                       preprocessing_type=args.preprocessing_type,
-                       smoothing=args.smoothing,
-                       parcel_file=args.parcellation_file,
-                       parcel_name=args.parcellation_name,
-                       seed_ROI_name=args.seed_ROI_name,
-                       seed_handling=args.seed_handling,
-                       seed_analysis_output=args.seed_analysis_output,
-                       text_output_format=args.text_output_format,
-                       selected_reg_name=args.reg_name,
-                       motion_confounds=args.motion_confounds,
-                       ICAoutputs=ICAoutputs,
-                       combine_resting_scans=args.combine_resting_scans,
-                       output_dir=args.output_dir,
-                       statistic=args.statistic)
-    
+    multiproc_pool.map(partial(run_CORTADO,ICAstring=ICAstring, 
+                            preprocessing_type=args.preprocessing_type,
+                            smoothing=args.smoothing,
+                            parcel_file=args.parcellation_file,
+                            parcel_name=args.parcellation_name,
+                            seed_ROI_name=args.seed_ROI_name,
+                            seed_handling=args.seed_handling,
+                            seed_analysis_output=args.seed_analysis_output,
+                            text_output_format=args.text_output_format,
+                            selected_reg_name=args.reg_name,
+                            motion_confounds=args.motion_confounds,
+                            ICAoutputs=ICAoutputs,
+                            combine_resting_scans=args.combine_resting_scans,
+                            output_dir=args.output_dir,
+                            statistic=args.statistic),
+    sorted(combined_bolds_list))    
