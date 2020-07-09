@@ -83,9 +83,10 @@ class seed_analysis:
             
         # is entered CIFTI file actually a CIFTI file?
         try:
-            cifti_load = nibabel.cifti2.cifti2.load(self.cifti_file)
+            self.cifti_load = nibabel.cifti2.cifti2.load(self.cifti_file)
         except:
             print("file does not look like a cifti file")
+        self.cifti_load = nibabel.cifti2.cifti2.load(self.cifti_file)
         cifti_file_basename = os.path.basename(self.cifti_file)
         cifti_prefix = cifti_file_basename.split(".")[0]
         cifti_suffix = '.'.join(cifti_file_basename.split(".")[1:])
@@ -111,6 +112,7 @@ class seed_analysis:
             self.parcellated_cifti_load = nibabel.cifti2.cifti2.load(self.parcellated_cifti_file)
         except:
             print("file does not look like a cifti file")
+        self.parcellated_cifti_load = nibabel.cifti2.cifti2.load(self.parcellated_cifti_file)
                   
 class regression(seed_analysis):
     def setup(self):
@@ -373,7 +375,8 @@ class pair_pair_connectivity(seed_analysis):
         if self.level==2:
             self.df_cifti_load = pd.DataFrame(self.fmri_data_np_arr.mean(axis=2))
         if type(self.seed_ROI_name) == list and len(self.seed_ROI_name) > 1:
-            if self.seed_analysis_output == 'parcellated':    
+            if self.seed_analysis_output == 'parcellated':
+                self.df_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
                 self.df_cifti_load.columns = self.parcel_labels
                 self.df_cifti_load['avg'] = self.df_cifti_load[self.seed_ROI_name].mean(axis=1)
                 self.parcel_labels=self.df_cifti_load.columns.to_list()
@@ -389,6 +392,8 @@ class pair_pair_connectivity(seed_analysis):
                 df_parcellated_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
                 df_parcellated_cifti_load.columns = self.parcel_labels
                 self.df_cifti_load[self.seed_ROI_name] = df_parcellated_cifti_load[self.seed_ROI_name]
+            else:
+                self.df_cifti_load = pd.DataFrame(self.parcellated_cifti_load.get_fdata())
         cifti_np_array = self.df_cifti_load.to_numpy()
         if self.method == 'correlation':
             #Pearson correlation coefficients with LedoitWolf covariance estimator
@@ -438,7 +443,11 @@ class pair_pair_connectivity(seed_analysis):
             new_r_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.r_functional_vector,axis=1)),header=self.cifti_load.header)
             new_z_cifti_img = nibabel.cifti2.Cifti2Image(np.transpose(np.expand_dims(self.z_functional_vector,axis=1)),header=self.cifti_load.header)
             cifti_file_suffix = '.dscalar.nii'
-        new_cifti_output_folder=os.path.join(self.output_dir,self.fmrifoldername+'_'+self.parcel_name+self.ICAstring+'_level'+str(self.level) + '_seed' + self.seed_ROI_string,output_format_folder)
+        if self.level == 1:
+            new_cifti_output_folder = os.path.join(self.output_dir,self.fmriname+"_"+self.parcel_name+self.ICAstring+'_level' + str(self.level)+'_seed'+self.seed_ROI_string,output_format_folder)
+        else:
+            new_cifti_output_folder=os.path.join(self.output_dir,self.fmrifoldername+'_'+self.parcel_name+self.ICAstring+'_level'+str(self.level) + '_seed' + self.seed_ROI_string,output_format_folder)
+        
         if not os.path.isdir(new_cifti_output_folder):
             os.makedirs(new_cifti_output_folder)
         nibabel.cifti2.save(new_r_cifti_img,os.path.join(new_cifti_output_folder,'rstats' + cifti_file_suffix))

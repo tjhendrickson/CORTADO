@@ -70,7 +70,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                        parcel_file=parcel_file,parcel_name=parcel_name,
                        seed_ROI_name=seed_ROI_name,level=1,
                        pipeline=preprocessing_type,ICAstring=ICAstring,
-                       vol_fmritcs=vol_fmritcs,
+                       vol_fmritcs='',
                        confound=motion_confounds_filepath,
                        smoothing=smoothing,regname=selected_reg_name,
                        fmriname=fmriname,
@@ -109,7 +109,7 @@ def first_level_logic(fmritcs,output_dir,seed_ROI_name,seed_handling,
                                            parcel_file=parcel_file,parcel_name=parcel_name,
                                            seed_ROI_name=seed,level=1,
                                            pipeline=preprocessing_type,ICAstring=ICAstring,
-                                           vol_fmritcs=vol_fmritcs,
+                                           vol_fmritcs='',
                                            confound=motion_confounds_filepath,
                                            smoothing=smoothing,regname=selected_reg_name,
                                            fmriname=fmriname,
@@ -172,18 +172,18 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
     elif combine_resting_scans == 'No' or combine_resting_scans == 'no':
         fmritcs = bold
         level = 1
-
-    if preprocessing_type == 'HCP':
-        if ICAoutputs == 'YES':
-            if selected_reg_name == msm_all_reg_name:
-                vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+    if statistic == 'regression':
+        if preprocessing_type == 'HCP':
+            if ICAoutputs == 'YES':
+                if selected_reg_name == msm_all_reg_name:
+                    vol_fmritcs=fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
+                else:
+                    vol_fmritcs=fmritcs.replace('_Atlas_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
             else:
-                vol_fmritcs=fmritcs.replace('_Atlas_hp2000_clean.dtseries.nii','_hp2000_clean.nii.gz')
-        else:
-            if selected_reg_name == msm_all_reg_name:
-                vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
-            else:
-                vol_fmritcs = fmritcs.replace('_Atlas_hp2000.dtseries.nii','_hp2000.nii.gz')
+                if selected_reg_name == msm_all_reg_name:
+                    vol_fmritcs = fmritcs.replace('_Atlas_MSMAll_2_d40_WRN_hp2000.dtseries.nii','_hp2000.nii.gz')
+                else:
+                    vol_fmritcs = fmritcs.replace('_Atlas_hp2000.dtseries.nii','_hp2000.nii.gz')
 
     if 'ses' in fmritcs:
         subject_label = fmritcs.split('sub-')[1].split('/')[0]
@@ -355,7 +355,8 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                             l.release()
                             time.sleep(1)
     else:
-        first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
+        if statistic == 'regression':
+            first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
                                             seed_ROI_name=seed_ROI_name,
                                             seed_handling=seed_handling,
                                             ICAstring=ICAstring,
@@ -370,6 +371,22 @@ def run_CORTADO(bold, ICAstring, preprocessing_type, smoothing, parcel_file,
                                             parcel_file=parcel_file,
                                             parcel_name=parcel_name,
                                             selected_reg_name=selected_reg_name)
+        else:
+            first_level_logic(fmritcs=fmritcs,output_dir=output_dir,
+                                seed_ROI_name=seed_ROI_name,
+                                seed_handling=seed_handling,
+                                ICAstring=ICAstring,
+                                statistic=statistic,
+                                motion_confounds=motion_confounds,
+                                preprocessing_type=preprocessing_type,
+                                vol_fmritcs='',
+                                seed_analysis_output=seed_analysis_output,
+                                level=level,
+                                text_output_format=text_output_format,
+                                smoothing=smoothing,
+                                parcel_file=parcel_file,
+                                parcel_name=parcel_name,
+                                selected_reg_name=selected_reg_name)
     
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--input_dir', help='The directory where the preprocessed derivative needed live',required=True)
