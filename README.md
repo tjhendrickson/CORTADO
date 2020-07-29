@@ -1,19 +1,14 @@
 # CORTADO
 
-## CORTADO 
-This postprocessing pipeline is developed by the [University of Minnesota Informatics Institute](https://research.umn.edu/units/umii) for use by University of Minnesota neuroimaging researchers, and for open-source software distribution. CORTADO stands for Cifti based O Resting state seed  T Analysis D O, ultimately I just really enjoy coffee :).CORTADO facilitates seed-based analysis with BIDS compatiable CIFTI rsfMRI derivates from the [Human Connectome Project pipeline](https://github.com/Washington-University/Pipelines) by creating a robust and easy to use Singularity container, as will be described here. This software is intended to follow a "Glass Box" philosophy in that while this software is automated through the usage of containerization one can review this github repository to visually inspect the source code and methods used. 
+## Description 
+This postprocessing pipeline is developed by the [University of Minnesota Informatics Institute](https://research.umn.edu/units/umii) for use by University of Minnesota neuroimaging researchers, and for open-source software distribution. CORTADO facilitates seed-based analysis with BIDS compatiable CIFTI rsfMRI derivates from the [Human Connectome Project pipeline](https://github.com/Washington-University/Pipelines) by creating a robust and easy to use Singularity container, as will be described here. This software is intended to follow a "Glass Box" philosophy in that while this software is automated through the usage of containerization one can review this github repository to visually inspect the source code and methods used. 
 
 ### Container Hosting
-The containerization of this application is maintained and hosted on Singularity Hub [![https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32020.svg](https://www.singularity-hub.org/static/img/hosting-singularity--hub-%23e32929.svg)](https://singularity-hub.org/collections/3125). Pull the most recent container by typing the command below into a linux terminal, (**NOTE: you do not have to do this every time before executing the container!**)
+The containerization of this application is maintained and hosted on Singularity Hub [![https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32929.svg](https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32929.svg)](https://singularity-hub.org/collections/3125). Pull the most recent container by typing the command below into a linux terminal, (**NOTE: you do not have to do this every time before executing the container!**)
 
 ```
 singularity pull shub://tjhendrickson/CORTADO
 ```
-Once this command completes there should be a file named tjhendrickson-CORTADO-master-latest.simg within your current working directory. In the same terminal as above type:
-```
-ls tjhendrickson-CORTADO-master-latest.simg
-```
-If file is returned you have successfully pulled the container and are ready to use it!
 
 ### Singularity Usage
  
@@ -23,7 +18,7 @@ If file is returned you have successfully pulled the container and are ready to 
  ```
  Which should return the following:
  ```
- usage: run.py [-h]
+ usage: CORTADO [-h]
               [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
               [--session_label SESSION_LABEL [SESSION_LABEL ...]]
               [--fsf_template_folder FSF_TEMPLATE_FOLDER]
@@ -87,4 +82,5 @@ optional arguments:
                         The output of the seed based analysis. Choices are
                         "dense" (i.e. dtseries.nii) and "parcellated" (i.e.
                         ptseries.nii)).
+     
 ```
