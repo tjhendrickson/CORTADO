@@ -7,8 +7,8 @@ CORTADO: A Seed-Based Analysis Tool for CIFTI rsfMRI data
    
    about
    license
-   singularity
    usage
+   singularity
    outputs
 
 

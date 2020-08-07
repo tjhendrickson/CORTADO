@@ -34,10 +34,11 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Outputs of CORTADO" href="outputs.html" />
-    <link rel="prev" title="Run CORTADO via Singularity container" href="singularity.html" /> 
+    <link rel="next" title="Run CORTADO via Singularity container" href="singularity.html" />
+    <link rel="prev" title="License" href="license.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -82,8 +83,10 @@
             
             
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="singularity.html">Run CORTADO via Singularity container</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Usage Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Run CORTADO via Singularity container</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs of CORTADO</a></li>
 </ul>
 
@@ -151,6 +154,148 @@
             
   <div class="section" id="usage-notes">
 <h1>Usage Notes<a class="headerlink" href="#usage-notes" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="o">--</span><span class="n">input_dir</span> <span class="n">INPUT_DIR</span> <span class="o">--</span><span class="n">output_dir</span> <span class="n">OUTPUT_DIR</span> <span class="o">--</span><span class="n">group</span>
+            <span class="p">{</span><span class="n">participant</span><span class="p">,</span><span class="n">batch</span><span class="p">}</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">participant_label</span> <span class="n">PARTICIPANT_LABEL</span> <span class="p">[</span><span class="n">PARTICIPANT_LABEL</span> <span class="o">...</span><span class="p">]]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">session_label</span> <span class="n">SESSION_LABEL</span> <span class="p">[</span><span class="n">SESSION_LABEL</span> <span class="o">...</span><span class="p">]]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">preprocessing_type</span> <span class="p">{</span><span class="n">HCP</span><span class="p">,</span><span class="n">fmriprep</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">use_ICA_outputs</span> <span class="p">{</span><span class="n">Yes</span><span class="p">,</span><span class="n">yes</span><span class="p">,</span><span class="n">No</span><span class="p">,</span><span class="n">no</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">combine_resting_scans</span> <span class="p">{</span><span class="n">Yes</span><span class="p">,</span><span class="n">yes</span><span class="p">,</span><span class="n">No</span><span class="p">,</span><span class="n">no</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">smoothing</span> <span class="n">SMOOTHING</span><span class="p">]</span> <span class="o">--</span><span class="n">parcellation_file</span> <span class="n">PARCELLATION_FILE</span>
+            <span class="o">--</span><span class="n">parcellation_name</span> <span class="n">PARCELLATION_NAME</span> <span class="o">--</span><span class="n">seed_ROI_name</span>
+            <span class="n">SEED_ROI_NAME</span> <span class="p">[</span><span class="n">SEED_ROI_NAME</span> <span class="o">...</span><span class="p">]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">seed_handling</span> <span class="p">{</span><span class="n">together</span><span class="p">,</span><span class="n">separate</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">seed_analysis_output</span> <span class="p">{</span><span class="n">dense</span><span class="p">,</span><span class="n">parcellated</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">motion_confounds</span> <span class="p">{</span><span class="n">NONE</span><span class="p">,</span><span class="n">Movement_Regressors</span><span class="p">,</span><span class="n">Movement_Regressors_dt</span><span class="p">,</span><span class="n">Movement_RelativeRMS</span><span class="p">,</span><span class="n">Movement_RelativeRMS_mean</span><span class="p">,</span><span class="n">Movement_AbsoluteRMS</span><span class="p">,</span><span class="n">Movement_AbsoluteRMS_mean</span><span class="p">,</span><span class="n">dvars</span><span class="p">,</span><span class="n">fd</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">reg_name</span> <span class="p">{</span><span class="n">NONE</span><span class="p">,</span><span class="n">MSMAll_2_d40_WRN</span><span class="p">}]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">text_output_format</span> <span class="p">{</span><span class="n">CSV</span><span class="p">,</span><span class="n">csv</span><span class="p">,</span><span class="n">none</span><span class="p">,</span><span class="n">NONE</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">num_cpus</span> <span class="n">NUM_CPUS</span><span class="p">]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">statistic</span> <span class="p">{</span><span class="n">correlation</span><span class="p">,</span><span class="n">regression</span><span class="p">}]</span>
+</pre></div>
+</div>
+<dl>
+<dt>required arguments:</dt><dd><dl class="option-list">
+<dt><kbd><span class="option">--input_dir <var>INPUT_DIR</var></span></kbd></dt>
+<dd><p>The directory where the preprocessed derivative needed
+live</p>
+</dd>
+<dt><kbd><span class="option">--output_dir <var>OUTPUT_DIR</var></span></kbd></dt>
+<dd><p>The directory where the output files should be stored.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>–group {participant,batch}</dt><dd><p>Whether to run this participant by participant or the
+entire group. Choices are “participant” or “batch”. If
+participant by participant “–participant_label” and ”
+–session_label” must be specified</p>
+</dd>
+</dl>
+<dl class="option-list">
+<dt><kbd><span class="option">--parcellation_file <var>PARCELLATION_FILE</var></span></kbd></dt>
+<dd><p>The CIFTI label/atlas file to use or used to
+parcellate the brain.</p>
+</dd>
+<dt><kbd><span class="option">--parcellation_name <var>PARCELLATION_NAME</var></span></kbd></dt>
+<dd><p>Shorthand name of the CIFTI label file.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>–seed_ROI_name SEED_ROI_NAME [SEED_ROI_NAME …]</dt><dd><p>Space separated list of ROI name/s from CIFTI label
+file to be used as the seed ROI/s. The exact ROI from
+the label file must be known!</p>
+</dd>
+</dl>
+</dd>
+<dt>optional arguments:</dt><dd><dl class="option-list">
+<dt><kbd><span class="option">-h</span>, <span class="option">--help</span></kbd></dt>
+<dd><p>show this help message and exit</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>–participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL …]</dt><dd><p>The label of the participant that should be analyzed.
+The label corresponds to sub-&lt;participant_label&gt; from
+the BIDS spec (so it does not include “sub-“). If this
+parameter is not provided all subjects should be
+analyzed. Multiple participants can be specified with
+a space separated list.</p>
+</dd>
+<dt>–session_label SESSION_LABEL [SESSION_LABEL …]</dt><dd><p>The label of the session that should be analyzed. The
+label corresponds to ses-&lt;session_label&gt; from the BIDS
+spec (so it does not include “ses-“). If this
+parameter is not provided all sessions within a
+subject should be analyzed.</p>
+</dd>
+<dt>–preprocessing_type {HCP,fmriprep}</dt><dd><p>BIDS-apps preprocessing pipeline run on data. Choices
+include “HCP” and “fmriprep”. Default: “HCP”.</p>
+</dd>
+<dt>–use_ICA_outputs {Yes,yes,No,no}</dt><dd><p>Use ICA (whether FIX or AROMA) outputs in seed
+analysis. Choices include “Y/yes” or “N/no”. Default:
+“Yes”.</p>
+</dd>
+<dt>–combine_resting_scans {Yes,yes,No,no}</dt><dd><p>If multiple of the same resting state BIDS file type
+exist should they be combined prior seed analysis?
+Choices include “Y/yes” or “N/no”. Default “No”.</p>
+</dd>
+</dl>
+<dl class="option-list">
+<dt><kbd><span class="option">--smoothing <var>SMOOTHING</var></span></kbd></dt>
+<dd><p>What FWHM smoothing (in mm) to apply to final output,
+only applies to SBA with dtseries. Default: 4</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>–seed_handling {together,separate}</dt><dd><p>Of the ROI/s you have provided do you want to treat
+them as together (i.e. averaging ROIs together), or
+separate (run separate seed based analyses for each
+ROI)? Choices are “together”, or “separate”. Default:
+“separate”.</p>
+</dd>
+<dt>–seed_analysis_output {dense,parcellated}</dt><dd><p>The output of the seed based analysis. Choices are
+“dense” (i.e. dtseries.nii) and “parcellated” (i.e.
+ptseries.nii)). Default: “parcellated”.</p>
+</dd>
+<dt>–motion_confounds {NONE,Movement_Regressors,Movement_Regressors_dt,Movement_RelativeRMS,Movement_RelativeRMS_mean,Movement_AbsoluteRMS,Movement_AbsoluteRMS_mean,dvars,fd}</dt><dd><p>What type of motion confounds to use, if any. Note
+only works in combination with “–statistic
+regression”. Choices are “Movement_Regressors” (motion
+rotation angles and translations in mm),
+“Movement_Regressors_dt” (detrended motion rotation
+angles and translations in mm),
+“Movement_Regressors_demean” (demeaned motion rotation
+angles and translations in mm) “Movement_RelativeRMS”
+(RMS intensity difference of volume N to the reference
+volume), “Movement_RelativeRMS_mean” (square of RMS
+intensity difference of volume N to the reference
+volume), “Movement_AbsoluteRMS” (absolute RMS
+intensity difference of volume N to the reference
+volume, “Movement_AbsoluteRMS_mean” (square of
+absolute RMS intensity difference of volume N to the
+reference volume), “dvars” ( RMS intensity difference
+of volume N to volume N+1 (see Power et al,
+NeuroImage, 59(3), 2012)), “fd” ( frame displacement
+(average of rotation and translation parameter
+differences - using weighted scaling, as in Power et
+al.))</p>
+</dd>
+<dt>–reg_name {NONE,MSMAll_2_d40_WRN}</dt><dd><p>What type of registration do you want to use? Choices
+are “MSMAll_2_d40_WRN” and “NONE”. Default:
+“MSMAll_2_d40_WRN”.</p>
+</dd>
+<dt>–text_output_format {CSV,csv,none,NONE}</dt><dd><p>What format should the text output be in? Choices are
+“CSV” or “NONE”. Default: “CSV”.</p>
+</dd>
+</dl>
+<dl class="option-list">
+<dt><kbd><span class="option">--num_cpus <var>NUM_CPUS</var></span></kbd></dt>
+<dd><p>How many concurrent CPUs to use. Default: “1”.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>–statistic {correlation,regression}</dt><dd><p>Strategy to calculate functional connectivity. Choices
+are “correlation”, and “regression” Default:
+“correlation”</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </div>
 
 
@@ -161,10 +306,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="outputs.html" class="btn btn-neutral float-right" title="Outputs of CORTADO" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="singularity.html" class="btn btn-neutral float-right" title="Run CORTADO via Singularity container" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="singularity.html" class="btn btn-neutral float-left" title="Run CORTADO via Singularity container" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="license.html" class="btn btn-neutral float-left" title="License" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

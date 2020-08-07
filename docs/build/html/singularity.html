@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Run CORTADO via Singularity container &mdash; CORTADO latest documentation</title>
+  <title>Running CORTADO &mdash; CORTADO latest documentation</title>
   
 
   
@@ -34,10 +34,11 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="&lt;no title&gt;" href="usage.html" />
-    <link rel="prev" title="CORTADO: A Seed-Based Analysis Tool for CIFTI rsfMRI data" href="index.html" /> 
+    <link rel="next" title="Outputs of CORTADO" href="outputs.html" />
+    <link rel="prev" title="Usage Notes" href="usage.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -82,7 +83,15 @@
             
             
               <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Run CORTADO via Singularity container</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Notes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running CORTADO</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#hosting">Hosting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#singularity-usage">Singularity Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs of CORTADO</a></li>
 </ul>
 
             
@@ -128,7 +137,7 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
-      <li>Run CORTADO via Singularity container</li>
+      <li>Running CORTADO</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -147,8 +156,25 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="run-cortado-via-singularity-container">
-<h1>Run CORTADO via Singularity container<a class="headerlink" href="#run-cortado-via-singularity-container" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="running-cortado">
+<h1>Running CORTADO<a class="headerlink" href="#running-cortado" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="hosting">
+<h2>Hosting<a class="headerlink" href="#hosting" title="Permalink to this headline">¶</a></h2>
+<p>The containerization of this application is maintained and hosted on Singularity Hub. To inspect build, click: <a class="reference external" href="https://singularity-hub.org/collections/3125"><img alt="build location" src="https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32929.svg" /></a></p>
+<p>Pull the most recent container by typing the command below into a linux terminal, (<strong>NOTE: you do not have to do this every time before executing the container!</strong>)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">singularity</span> <span class="n">pull</span> <span class="n">shub</span><span class="p">:</span><span class="o">//</span><span class="n">tjhendrickson</span><span class="o">/</span><span class="n">CORTADO</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="singularity-usage">
+<h2>Singularity Usage<a class="headerlink" href="#singularity-usage" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>At any time you can look at usage by typing in a terminal:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">singularity</span> <span class="n">run</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">CORTADO</span><span class="o">/</span><span class="n">container</span> <span class="o">-</span><span class="n">h</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
 </div>
 
 
@@ -159,10 +185,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="usage.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="outputs.html" class="btn btn-neutral float-right" title="Outputs of CORTADO" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="index.html" class="btn btn-neutral float-left" title="CORTADO: A Seed-Based Analysis Tool for CIFTI rsfMRI data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="usage.html" class="btn btn-neutral float-left" title="Usage Notes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
