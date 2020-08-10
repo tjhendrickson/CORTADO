@@ -10,12 +10,3 @@ CORTADO: A Seed-Based Analysis Tool for CIFTI rsfMRI data
    usage
    singularity
    outputs
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
