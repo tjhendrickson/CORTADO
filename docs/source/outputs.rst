@@ -11,3 +11,5 @@ Unless specified, CORTADO will automatically output a CSV file.
 	* "rsfMRIScanName" is pulled directly from the rsfMRI data file name
 4. The CSV file will be outputted to the bound folder pointing to "/output_dir" (see :doc:`singularity`)
 
+With more complicated use-cases CORTADO will output differently named CSV files. Email Tim Hendrickson at hendr522@umn.edu with questions.
+
