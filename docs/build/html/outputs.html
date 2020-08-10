@@ -34,9 +34,10 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Usage Notes" href="usage.html" /> 
+    <link rel="prev" title="Running CORTADO" href="singularity.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -81,8 +82,10 @@
             
             
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="singularity.html">Run CORTADO via Singularity container</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Running CORTADO</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Outputs of CORTADO</a></li>
 </ul>
 
@@ -150,6 +153,21 @@
             
   <div class="section" id="outputs-of-cortado">
 <h1>Outputs of CORTADO<a class="headerlink" href="#outputs-of-cortado" title="Permalink to this headline">¶</a></h1>
+<p>Unless specified, CORTADO will automatically output a CSV file.</p>
+<ol class="arabic">
+<li><p>Each row indicates a different scanning session</p></li>
+<li><p>The first two columns indicate the subject and session IDs (pulled directly from subject and session BIDS identifiers) with the remaining columns being ROIs based on the parcellation file chosen</p></li>
+<li><p>The name of the CSV file will be in the form of
+rsfMRIScanName_Atlas_REG_NAME_hp2000_clean_PARCEL_NAME_FIXclean_level1_seedSEED_NAME.csv</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>“REG_NAME, PARCEL_NAME and “SEED_NAME” correspond to arguments specified</p></li>
+<li><p>“rsfMRIScanName” is pulled directly from the rsfMRI data file name</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>The CSV file will be outputted to the bound folder pointing to “/output_dir” (see <a class="reference internal" href="singularity.html"><span class="doc">Running CORTADO</span></a>)</p></li>
+</ol>
 </div>
 
 
@@ -161,7 +179,7 @@
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
       
-        <a href="usage.html" class="btn btn-neutral float-left" title="Usage Notes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="singularity.html" class="btn btn-neutral float-left" title="Running CORTADO" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

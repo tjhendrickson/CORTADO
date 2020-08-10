@@ -161,7 +161,7 @@
 <div class="section" id="hosting">
 <h2>Hosting<a class="headerlink" href="#hosting" title="Permalink to this headline">¶</a></h2>
 <p>The containerization of this application is maintained and hosted on Singularity Hub. To inspect build, click: <a class="reference external" href="https://singularity-hub.org/collections/3125"><img alt="build location" src="https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32929.svg" /></a></p>
-<p>Pull the most recent container by typing the command below into a linux terminal, (<strong>NOTE: you do not have to do this every time before executing the container!</strong>)</p>
+<p>Pull the most recent container by typing the command below into a linux terminal, (<strong>NOTE: you do not have to do this every time before executing the container!</strong>):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">singularity</span> <span class="n">pull</span> <span class="n">shub</span><span class="p">:</span><span class="o">//</span><span class="n">tjhendrickson</span><span class="o">/</span><span class="n">CORTADO</span>
 </pre></div>
 </div>
@@ -174,6 +174,22 @@
 </pre></div>
 </div>
 </div></blockquote>
+<p>To run the container properly, you will likely have to “bind” several folders with the “-B” flag so the container can see needed data.
+For example consider the case in which your inputted data is within the folder “/local_input_dir”, your intended output folder is “/local_output_dir” and your parcellation file of interest is in “/parcel_file_location”. The command would be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">singularity</span> <span class="n">run</span> <span class="o">-</span><span class="n">B</span> <span class="o">/</span><span class="n">local_input_dir</span><span class="p">:</span><span class="o">/</span><span class="n">input_dir</span> <span class="o">-</span><span class="n">B</span> <span class="o">/</span><span class="n">local_output_dir</span><span class="p">:</span><span class="o">/</span><span class="n">output_dir</span> <span class="o">-</span><span class="n">B</span> <span class="o">/</span><span class="n">parcel_file_location</span><span class="p">:</span><span class="o">/</span><span class="n">media</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">CORTADO</span><span class="o">/</span><span class="n">container</span> <span class="o">--</span><span class="n">input_dir</span> <span class="o">/</span><span class="n">input_dir</span> <span class="o">--</span><span class="n">output_dir</span> <span class="o">/</span><span class="n">output_dir</span> <span class="o">--</span><span class="n">parcellation_file</span> <span class="o">/</span><span class="n">media</span><span class="o">/</span><span class="n">NameOfParcelFile</span><span class="o">.</span><span class="n">dlabel</span><span class="o">.</span><span class="n">nii</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>Notice the use of the folders “/input_dir”, “/output_dir”, and “/media” following the “:” and within the container. Leave those as is, and just change out the actual paths to your data.</p>
+<p>Now let us take this a step further. Imagine again that the input, output, and parcel file data are in the same location.
+You are additionally interested in:
+1) running a batch on an entire dataset
+2) Would like to use the Yeo 2011 atlas for your parcellation file
+3) The left thalamus is your seed of interest.
+Your command would be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">singularity</span> <span class="n">run</span> <span class="o">-</span><span class="n">B</span> <span class="o">/</span><span class="n">local_input_dir</span><span class="p">:</span><span class="o">/</span><span class="n">input_dir</span> <span class="o">-</span><span class="n">B</span> <span class="o">/</span><span class="n">local_output_dir</span><span class="p">:</span><span class="o">/</span><span class="n">output_dir</span> <span class="o">-</span><span class="n">B</span> <span class="o">/</span><span class="n">parcel_file_location</span><span class="p">:</span><span class="o">/</span><span class="n">media</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">CORTADO</span><span class="o">/</span><span class="n">container</span> <span class="o">--</span><span class="n">input_dir</span> <span class="o">/</span><span class="n">input_dir</span> <span class="o">--</span><span class="n">output_dir</span> <span class="o">/</span><span class="n">output_dir</span>  <span class="o">--</span><span class="n">group</span> <span class="n">batch</span> <span class="o">--</span><span class="n">parcellation_file</span> <span class="o">/</span><span class="n">media</span><span class="o">/</span><span class="n">Yeo2011</span><span class="o">.</span><span class="n">dlabel</span><span class="o">.</span><span class="n">nii</span> <span class="o">--</span><span class="n">parcellation_name</span> <span class="n">THALAMUS_LEFT</span>
+</pre></div>
+</div>
+<p>There are more complicated cases such as combining across multiple ROIs, averaging rsfMRI scans together within a sessions, and others, however, that is beyond the scope. For more advanced use cases please contact Tim Hendrickson at <a class="reference external" href="mailto:hendr522&#37;&#52;&#48;umn&#46;edu">hendr522<span>&#64;</span>umn<span>&#46;</span>edu</a>.</p>
 </div>
 </div>
 
